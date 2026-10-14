@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-pop 해외공연 데이터 검증기</title>
+<meta name="description" content="K-pop 해외공연 데이터셋 엑셀을 브라우저 안에서 검증합니다. 파일은 외부로 전송되지 않습니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="checker.js"></script>
+<style>
+:root{
+  --bg:#f6f7f9;--card:#fff;--ink:#16181d;--muted:#5d6470;--line:#e3e6eb;--accent:#3b5bdb;
+  --err:#c92a2a;--err-bg:#fff0f0;--warn:#b35c00;--warn-bg:#fff6e6;--info:#2f6f9f;--info-bg:#eef6fc;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#111318;--card:#1a1d24;--ink:#e9ecf1;--muted:#9aa2ae;--line:#2b2f38;--accent:#7c95ff;
+  --err:#ff8787;--err-bg:#3a1d1f;--warn:#ffb35c;--warn-bg:#3a2a14;--info:#74c0fc;--info-bg:#15283a;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Noto Sans KR",system-ui,sans-serif}
+header{padding:28px 16px 8px;max-width:1180px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0}
+main{max-width:1180px;margin:0 auto;padding:12px 16px 48px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop b{display:block;margin-bottom:4px}
+.drop small{color:var(--muted)}
+label.f{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input[type=date],input[type=number],input[type=search],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
+button{padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{border-radius:10px;padding:12px 14px;border:1px solid var(--line)}
+.stat .n{font-size:26px;font-weight:700}
+.stat.e{background:var(--err-bg);color:var(--err)}.stat.w{background:var(--warn-bg);color:var(--warn)}.stat.i{background:var(--info-bg);color:var(--info)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:13px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);cursor:pointer;user-select:none}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tablewrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:860px;font-size:13.5px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--card);font-weight:500;color:var(--muted)}
+.sev{font-weight:700;white-space:nowrap}
+.sev.e{color:var(--err)}.sev.w{color:var(--warn)}.sev.i{color:var(--info)}
+.muted{color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.hide{display:none}
+footer{max-width:1180px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>K-pop 해외공연 데이터 검증기</h1>
+  <p class="sub">엑셀을 올리면 규칙 위반을 찾아줘요. 파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않아요.</p>
+</header>
+<main>
+  <section class="card">
+    <div class="grid">
+      <div>
+        <label class="f">① 데이터셋 엑셀 (필수)</label>
+        <div class="drop" id="dropMain"><b>여기에 끌어다 놓거나 클릭</b><small id="mainName">'해외 공연 현황' 시트가 있는 .xlsx</small></div>
+        <input type="file" id="fileMain" accept=".xlsx,.xlsm" class="hide">
+      </div>
+      <div>
+        <label class="f">② 공연장 마스터 (선택)</label>
+        <div class="drop" id="dropVenue"><b>공연장 마스터 .xlsx</b><small id="venueName">location · city · capacity · source 열</small></div>
+        <input type="file" id="fileVenue" accept=".xlsx,.csv" class="hide">
+      </div>
+      <div>
+        <label class="f" for="refDate">기준일 ([예정] 판단)</label>
+        <input type="date" id="refDate">
+        <label class="f" for="strictFrom" style="margin-top:10px">엄격 검사 시작 연도</label>
+        <input type="number" id="strictFrom" value="2025" min="2010" max="2100">
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary" id="runBtn" disabled>검사 실행</button>
+      <span class="muted" id="status"></span>
+    </div>
+  </section>
+
+  <section class="card hide" id="resultCard">
+    <div class="stats" id="stats"></div>
+    <div class="grid" style="margin-top:14px">
+      <div><label class="f" for="yearFrom">연도 범위</label>
+        <div class="row"><input type="number" id="yearFrom" style="flex:1"> <span class="muted">~</span> <input type="number" id="yearTo" style="flex:1"></div></div>
+      <div><label class="f" for="q">검색 (아티스트·내용)</label><input type="search" id="q" placeholder="예: Kai Tak, BTS"></div>
+      <div><label class="f">내보내기</label>
+        <div class="row"><button id="dlXlsx">오류 리포트 .xlsx</button><button id="dlVenue">공연장 마스터 초안</button></div></div>
+    </div>
+    <div class="chips" id="sevChips"></div>
+    <div class="chips" id="checkChips"></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>등급</th><th>검사 항목</th><th>시트</th><th>엑셀 행</th><th>no</th><th>연도</th><th>아티스트</th><th>내용</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+    <p class="note" id="shown"></p>
+  </section>
+
+  <section class="card">
+    <b>검사 항목</b>
+    <p class="note" style="margin-top:6px">국내 공연 포함 · 관객수 &gt; 수용인원 · capacity에 여러 날 합계 의심 · 관객수=수용인원×일수(복사 의심) · 같은 공연장 capacity 불일치 · 공연장 마스터 대조 · 그룹 블록 끊김 · 연도별 목록 순위와 블록 순서 · 블록 안 날짜순 · 목록 밖(16위 이하) 상세 행 · 두 시트 값 불일치 · 수식이 다른 행 참조 · no 연번 · 분기(qt) · 날짜/일수 모순 · 중복 행 · [예정]/[일부 예정] 표시 누락 · 끝난 [예정] 공연</p>
+  </section>
+</main>
+<footer>공식 기관 자료 기준: attendance는 공식 출처가 있는 값만, 추정·애매하면 공란. 이 도구는 오류 후보를 찾아줄 뿐이고 최종 판단은 출처 확인 후 사람이 합니다.</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let mainWb = null, venueMaster = null, result = null;
+const today = new Date();
+$('refDate').value = today.toISOString().slice(0, 10);
+
+function bindDrop(drop, input, onFile) {
+  drop.onclick = () => input.click();
+  input.onchange = () => input.files[0] && onFile(input.files[0]);
+  drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && onFile(e.dataTransfer.files[0]); };
+}
+const readWb = (file) => file.arrayBuffer().then(buf => XLSX.read(buf, { cellFormula: true, sheetStubs: true }));
+
+bindDrop($('dropMain'), $('fileMain'), async (f) => {
+  $('status').textContent = '불러오는 중…';
+  try { mainWb = await readWb(f); $('mainName').textContent = f.name; $('runBtn').disabled = false; $('status').textContent = `시트: ${mainWb.SheetNames.join(', ')}`; }
+  catch (e) { $('status').textContent = '파일을 읽지 못했어요: ' + e.message; }
+});
+bindDrop($('dropVenue'), $('fileVenue'), async (f) => {
+  try { venueMaster = KpopChecker.parseVenueMaster(await readWb(f)); $('venueName').textContent = `${f.name} · 공연장 ${venueMaster.size}곳`; }
+  catch (e) { $('venueName').textContent = '읽기 실패: ' + e.message; }
+});
+
+const SEVS = [['오류', 'e'], ['확인필요', 'w'], ['참고', 'i']];
+let sevOn = new Set(['오류', '확인필요']), checkOn = null;
+
+$('runBtn').onclick = () => {
+  const [y, m, d] = $('refDate').value.split('-').map(Number);
+  const t0 = performance.now();
+  result = KpopChecker.run(mainWb, { refDate: new Date(y, m - 1, d), venueMaster, strictFrom: Number($('strictFrom').value) || 2025 });
+  $('status').textContent = `${result.stats.rows.toLocaleString()}행 검사 완료 (${Math.round(performance.now() - t0)}ms)`;
+  const yrs = result.stats.years || [];
+  $('yearFrom').value = Number($('strictFrom').value) || yrs[0] || '';
+  $('yearTo').value = yrs[yrs.length - 1] || '';
+  checkOn = null;
+  $('resultCard').classList.remove('hide');
+  render();
+};
+
+function filtered() {
+  const yf = Number($('yearFrom').value) || 0, yt = Number($('yearTo').value) || 9999, q = $('q').value.trim().toLowerCase();
+  return result.issues.filter(i => {
+    const y = Number(i.year);
+    const yearOk = !i.year || (y >= yf && y <= yt) || i.artist === '(여러 아티스트)';
+    const qOk = !q || (`${i.artist} ${i.detail} ${i.check}`).toLowerCase().includes(q);
+    return yearOk && qOk;
+  });
+}
+
+function render() {
+  const base = filtered();
+  const cnt = (s) => base.filter(i => i.sev === s).length;
+  $('stats').innerHTML = SEVS.map(([s, c]) => `<div class="stat ${c}"><div>${s}</div><div class="n">${cnt(s).toLocaleString()}</div></div>`).join('')
+    + `<div class="stat"><div>검사한 행</div><div class="n">${result.stats.rows.toLocaleString()}</div></div>`;
+  $('sevChips').innerHTML = SEVS.map(([s]) => `<span class="chip ${sevOn.has(s) ? 'on' : ''}" data-sev="${s}">${s} ${cnt(s)}</span>`).join('');
+  const checks = {};
+  base.filter(i => sevOn.has(i.sev)).forEach(i => checks[i.check] = (checks[i.check] || 0) + 1);
+  $('checkChips').innerHTML = `<span class="chip ${!checkOn ? 'on' : ''}" data-check="">전체</span>` +
+    Object.entries(checks).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span class="chip ${checkOn === c ? 'on' : ''}" data-check="${c}">${c} ${n}</span>`).join('');
+  const rows = base.filter(i => sevOn.has(i.sev) && (!checkOn || i.check === checkOn));
+  const cls = { '오류': 'e', '확인필요': 'w', '참고': 'i' };
+  const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  $('tbody').innerHTML = rows.slice(0, 2000).map(i => `<tr><td class="sev ${cls[i.sev]}">${i.sev}</td><td>${esc(i.check)}</td><td class="muted">${i.sheet === '해외 공연 현황' ? '본' : '(2)'}</td><td>${i.excelRow}</td><td>${esc(i.no)}</td><td>${esc(i.year)}</td><td>${esc(i.artist)}</td><td>${esc(i.detail)}</td></tr>`).join('');
+  $('shown').textContent = `${rows.length.toLocaleString()}건 표시${rows.length > 2000 ? ' (화면엔 앞 2,000건, 다운로드엔 전부)' : ''}`;
+  document.querySelectorAll('[data-sev]').forEach(el => el.onclick = () => { const s = el.dataset.sev; sevOn.has(s) ? sevOn.delete(s) : sevOn.add(s); render(); });
+  document.querySelectorAll('[data-check]').forEach(el => el.onclick = () => { checkOn = el.dataset.check || null; render(); });
+}
+['yearFrom', 'yearTo', 'q'].forEach(id => $(id).oninput = () => result && render());
+
+function saveWb(wb, name) {
+  const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const url = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+$('dlXlsx').onclick = () => {
+  const rows = filtered().map(i => ({ 등급: i.sev, 검사항목: i.check, 시트: i.sheet, 엑셀행: i.excelRow, no: i.no, 연도: i.year, 아티스트: i.artist, 내용: i.detail, 제안값: i.suggest ?? '' }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 16 }, { wch: 8 }, { wch: 7 }, { wch: 7 }, { wch: 16 }, { wch: 90 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws, '검증 결과');
+  saveWb(wb, `검증리포트_${$('refDate').value}.xlsx`);
+};
+$('dlVenue').onclick = () => {
+  const rows = result.venues.sort((a, b) => b.count - a.count).map(v => ({
+    location: v.location, city: v.city, country: v.country,
+    capacity: v.values.length === 1 ? v.values[0] : '',
+    source: '',
+    '기존 기입값': v.values.join(' / '),
+    '상태': v.values.length > 1 ? '값 불일치 — 공식 수용인원 확인 필요' : (v.values.length ? '단일값(출처 확인 필요)' : 'capacity 없음'),
+    '사용 행 수': v.count,
+  }));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{ wch: 40 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 40 }, { wch: 24 }, { wch: 30 }, { wch: 9 }];
+  XLSX.utils.book_append_sheet(wb, ws, '공연장 마스터');
+  saveWb(wb, '공연장_마스터_초안.xlsx');
+};
+</script>
+</body>
+</html>
