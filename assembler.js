@@ -270,7 +270,104 @@
     return wb.xlsx.writeBuffer();
   }
 
-  const api = { convertLegacy, writeSource, readSource, plan, writeOutput, FIELDS };
+
+  /* ---------- ⑤ 업데이트 파일 (추가·수정·삭제) ---------- */
+  const UPD_SHEET = '업데이트';
+  const UPD_COLS = ['작업', '대상_start_date', '대상_location', ...FIELDS, '근거'];
+  const META = ['gender', 'member', 'deyear', 'demon', 'deday', 'agency', 'agency2', 'agency3'];
+  const CLEAR = '(비움)';
+  const dkey = (d) => d instanceof Date ? fmt(d) : String(d == null ? '' : d).trim();
+
+  function readUpdate(wb) {
+    if (!wb.Sheets[UPD_SHEET]) throw new Error(`'${UPD_SHEET}' 시트가 없어요`);
+    const toD = (v) => serialToDate(v) || (v ?? null);
+    const rows = readTable(wb.Sheets[UPD_SHEET]).map((r, i) => {
+      r.__row = i + 2;
+      ['start_date', 'end_date', '대상_start_date'].forEach(k => { if (r[k] !== undefined && r[k] !== CLEAR) r[k] = toD(r[k]); });
+      return r;
+    });
+    const official = wb.Sheets['공식누적'] ? readTable(wb.Sheets['공식누적']) : [];
+    return { rows, official };
+  }
+
+  function applyUpdate(src, upd) {
+    const out = Object.assign({}, src, { main: src.main.map(r => Object.assign({}, r)), official: src.official.map(o => Object.assign({}, o)) });
+    const log = [];
+    const L = (u, 결과, 내용) => log.push({ 행: u.__row, 작업: u['작업'] || '', year: u.year ?? '', artist: u.artist ?? '', 대상: `${dkey(u['대상_start_date'] || u.start_date)} ${u['대상_location'] || u.location || ''}`.trim(), 결과, 내용, 근거: u['근거'] || '' });
+    const find = (u) => {
+      const d = dkey(u['대상_start_date'] || u.start_date), loc = norm(u['대상_location'] || u.location);
+      return out.main.findIndex(r => r.year === u.year && norm(r.artist) === norm(u.artist) && dkey(r.start_date) === d && (!loc || norm(r.location) === loc));
+    };
+    const addSrc = (r, u) => { if (u['출처']) r['출처'] = [r['출처'], u['출처']].filter(Boolean).join(' / '); };
+    upd.rows.forEach(u => {
+      const op = String(u['작업'] || '').trim();
+      if (!isNum(u.year) || !u.artist) return L(u, '오류', 'year·artist가 비어 있어요');
+      if (op === '추가') {
+        if (!(u.start_date instanceof Date) || !u.location) return L(u, '오류', 'start_date·location이 필요해요');
+        if (find(u) >= 0) return L(u, '건너뜀', '같은 공연(연도·아티스트·시작일·공연장)이 이미 있어요');
+        const r = {}; FIELDS.forEach(f => r[f] = (u[f] === undefined || u[f] === CLEAR) ? null : u[f]);
+        const same = out.main.find(x => norm(x.artist) === norm(u.artist));
+        const filled = [];
+        if (same) META.forEach(f => { if (r[f] == null && same[f] != null) { r[f] = same[f]; filled.push(f); } });
+        if (!r.type) r.type = 'concert';
+        out.main.push(r);
+        L(u, '추가', `${r.city || ''} ${r.location} ${dkey(r.start_date)}~${dkey(r.end_date)} ${r.days ?? ''}일` + (filled.length ? ` (아티스트 정보 ${filled.length}칸은 기존 행에서 복사)` : ''));
+      } else if (op === '수정') {
+        const i = find(u);
+        if (i < 0) return L(u, '오류', '고칠 공연을 찾지 못했어요 (대상_start_date·대상_location 확인)');
+        const r = out.main[i], ch = [];
+        FIELDS.forEach(f => {
+          if (f === '출처' || u[f] === undefined || u[f] === null || u[f] === '') return;
+          let nv = u[f] === CLEAR ? null : u[f];
+          if (typeof nv === 'string' && /^\+\s*/.test(nv)) nv = [r[f], nv.replace(/^\+\s*/, '')].filter(Boolean).join(' / ');   // '+ 내용' = 기존 값 뒤에 덧붙이기
+          if (dkey(r[f]) !== dkey(nv)) { ch.push(`${f}: ${dkey(r[f]) || '(빈칸)'} → ${dkey(nv) || '(빈칸)'}`); r[f] = nv; }
+        });
+        addSrc(r, u);
+        L(u, ch.length ? '수정' : '변경 없음', ch.join(' / ') || '바뀐 값이 없어요');
+      } else if (op === '삭제') {
+        const i = find(u);
+        if (i < 0) return L(u, '오류', '지울 공연을 찾지 못했어요');
+        const r = out.main.splice(i, 1)[0];
+        L(u, '삭제', `${r.city || ''} ${r.location} ${dkey(r.start_date)}`);
+      } else L(u, '오류', `작업은 추가·수정·삭제 중 하나여야 해요 (지금: '${op}')`);
+    });
+    upd.official.forEach((o, k) => {
+      const g = String(o['집계묶음'] || '').trim();
+      if (!g || !isNum(o['공식관객수'])) return log.push({ 행: `공식누적 ${k + 2}`, 작업: '공식누적', 결과: '오류', 내용: '집계묶음·공식관객수가 필요해요' });
+      const i = out.official.findIndex(x => String(x['집계묶음']).trim() === g);
+      const v = { 집계묶음: g, year: o.year, artist: o.artist, 공식관객수: o['공식관객수'], 출처: o['출처'], 설명: o['설명'] };
+      if (i >= 0) { const old = out.official[i]['공식관객수']; out.official[i] = v; log.push({ 행: `공식누적 ${k + 2}`, 작업: '공식누적', year: o.year, artist: o.artist, 대상: g, 결과: '수정', 내용: `${old} → ${v.공식관객수}`, 근거: o['출처'] || '' }); }
+      else { out.official.push(v); log.push({ 행: `공식누적 ${k + 2}`, 작업: '공식누적', year: o.year, artist: o.artist, 대상: g, 결과: '추가', 내용: `${v.공식관객수.toLocaleString()}`, 근거: o['출처'] || '' }); }
+    });
+    return { src: out, log };
+  }
+
+  async function writeUpdate(rows, official) {
+    const wb = new root.ExcelJS.Workbook();
+    const ws = wb.addWorksheet(UPD_SHEET);
+    ws.addRow(UPD_COLS); ws.getRow(1).font = { bold: true };
+    (rows || []).forEach(d => ws.addRow(UPD_COLS.map(c => d[c] === undefined ? null : d[c])));
+    UPD_COLS.forEach((c, i) => {
+      ws.getColumn(i + 1).width = ({ 작업: 7, artist: 14, location: 28, 대상_location: 28, remarks: 40, 출처: 40, 근거: 50 })[c] || 12;
+      if (/start_date|end_date/.test(c)) ws.getColumn(i + 1).numFmt = 'yyyy-mm-dd';
+    });
+    ws.views = [{ state: 'frozen', ySplit: 1, xSplit: 3 }];
+    const o = wb.addWorksheet('공식누적');
+    const oc = ['집계묶음', 'year', 'artist', '공식관객수', '출처', '설명'];
+    o.addRow(oc); o.getRow(1).font = { bold: true };
+    (official || []).forEach(d => o.addRow(oc.map(c => d[c] ?? null)));
+    const h = wb.addWorksheet('작성법');
+    [['작업', '추가 / 수정 / 삭제'],
+     ['추가', '새 공연 1행. year·artist·start_date·location 필수. gender~agency3가 비면 같은 아티스트 기존 행에서 복사'],
+     ['수정', '대상_start_date·대상_location으로 기존 공연을 찾고, 값을 적은 칸만 바꿈. 칸을 지우려면 (비움), 기존 글 뒤에 덧붙이려면 + 로 시작'],
+     ['삭제', '대상_start_date·대상_location(또는 start_date·location)으로 찾은 공연을 삭제'],
+     ['출처', '수정 시 기존 출처 뒤에 덧붙임'],
+     ['공식누적 시트', '합계만 공식 발표된 경우. 같은 집계묶음이 있으면 덮어씀. 공연목록 행의 집계묶음 칸도 같이 적어야 반영됨']].forEach(r => h.addRow(r));
+    h.getColumn(1).width = 14; h.getColumn(2).width = 100;
+    return wb.xlsx.writeBuffer();
+  }
+
+  const api = { convertLegacy, writeSource, readSource, plan, writeOutput, readUpdate, applyUpdate, writeUpdate, FIELDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.KpopAssembler = api;
 })(typeof window !== 'undefined' ? window : globalThis);

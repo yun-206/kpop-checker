@@ -27,7 +27,8 @@ h1{font-size:22px;margin:0 0 4px}
 .sub{color:var(--muted);margin:0}
 main{max-width:1180px;margin:0 auto;padding:12px 16px 48px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.r-add{color:var(--info);font-weight:700}.r-mod{color:var(--warn);font-weight:700}.r-del{color:var(--err);font-weight:700}.r-err{color:var(--err);font-weight:700;background:var(--err-bg)}
 .drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:.15s}
 .drop:hover,.drop.over{border-color:var(--accent)}
 .drop b{display:block;margin-bottom:4px}
@@ -78,7 +79,7 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 32px;color:var(--muted);fon
   <section class="card">
     <b>원본 데이터 → 결과 엑셀</b>
     <ol class="steps">
-      <li>원본 데이터 파일(공연목록·공연장마스터·공식누적·연도별목록·설정 시트)을 올려요. 없으면 ③에서 기존 엑셀을 변환하세요.</li>
+      <li>원본 데이터 파일을 올려요. 새 공연이 있으면 업데이트 파일도 같이 올려요(합쳐서 계산).</li>
       <li>자동 순위 연도는 공식 관객수 → (없으면) 수용인원×일수로 합산하고, 공식누적 시트의 묶음은 공식 합계를 한 번만 더해요.</li>
       <li>결과 엑셀은 박사님 양식(두 시트·목록·변수 설명)으로 나오고, 만들자마자 ② 검증을 자동으로 돌려요.</li>
     </ol>
@@ -87,6 +88,12 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 32px;color:var(--muted);fon
         <label class="f">원본 데이터 .xlsx</label>
         <div class="drop" id="dropSrc"><b>여기에 끌어다 놓거나 클릭</b><small id="srcName">'공연목록' 시트가 있는 원본 데이터</small></div>
         <input type="file" id="fileSrc" accept=".xlsx" class="hide">
+      </div>
+      <div>
+        <label class="f">업데이트 파일 .xlsx (선택)</label>
+        <div class="drop" id="dropUpd"><b>추가·수정·삭제할 행</b><small id="updName">'업데이트' 시트가 있는 파일</small></div>
+        <input type="file" id="fileUpd" accept=".xlsx" class="hide">
+        <p class="note" style="margin-top:6px"><a href="#" id="dlTpl">빈 업데이트 양식 받기</a></p>
       </div>
       <div>
         <label class="f" for="aRef">기준일 ([예정] 표시)</label><input type="date" id="aRef">
@@ -103,9 +110,10 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 32px;color:var(--muted);fon
   <section class="card hide" id="asmResult">
     <div class="row" style="justify-content:space-between">
       <b id="asmTitle">순위 산정 결과</b>
-      <div class="row"><button class="primary" id="dlOut">결과 엑셀 받기</button><button id="dlBasis">산정 근거 .xlsx</button><button id="toChk">검증 결과 보기</button></div>
+      <div class="row"><button class="primary" id="dlOut">결과 엑셀 받기</button><button id="dlNewSrc" class="hide">새 원본 받기</button><button id="dlBasis">산정 근거 .xlsx</button><button id="toChk">검증 결과 보기</button></div>
     </div>
     <div class="stats" id="asmStats" style="margin-top:12px"></div>
+    <div id="updWrap"></div>
     <div id="rankWrap"></div>
     <div id="asmNotes"></div>
   </section>
@@ -319,7 +327,7 @@ $('cnvBtn').onclick = async () => {
 };
 
 /* ---------- ① 조립·순위 ---------- */
-let srcData = null, asmPlan = null, outBuf = null;
+let srcData = null, asmPlan = null, outBuf = null, updData = null, merged = null, updLog = [];
 $('aRef').value = today.toISOString().slice(0, 10);
 bindDrop($('dropSrc'), $('fileSrc'), async (f) => {
   try {
@@ -334,11 +342,22 @@ bindDrop($('dropSrc'), $('fileSrc'), async (f) => {
   } catch (e) { $('srcName').textContent = '읽기 실패: ' + e.message; }
 });
 
+bindDrop($('dropUpd'), $('fileUpd'), async (f) => {
+  try {
+    updData = KpopAssembler.readUpdate(await readWb(f));
+    $('updName').textContent = `${f.name} · ${updData.rows.length}행 · 공식누적 ${updData.official.length}건`;
+  } catch (e) { updData = null; $('updName').textContent = '읽기 실패: ' + e.message; }
+});
+$('dlTpl').onclick = async (e) => { e.preventDefault(); saveBuf(await KpopAssembler.writeUpdate([], []), 'update_template.xlsx'); };
+
 $('asmBtn').onclick = async () => {
   $('asmStatus').textContent = '만드는 중…';
   try {
-    asmPlan = KpopAssembler.plan(srcData, { refDate: $('aRef').value, autoYears: $('aYears').value, topN: Number($('aTop').value) });
-    outBuf = await KpopAssembler.writeOutput(srcData, asmPlan);
+    merged = srcData; updLog = [];
+    if (updData) { const r = KpopAssembler.applyUpdate(srcData, updData); merged = r.src; updLog = r.log; }
+    merged.settings = Object.assign({}, merged.settings, { 기준일: $('aRef').value, 자동순위연도: $('aYears').value || merged.settings['자동순위연도'], 상위N: Number($('aTop').value) || 15 });
+    asmPlan = KpopAssembler.plan(merged, { refDate: $('aRef').value, autoYears: $('aYears').value, topN: Number($('aTop').value) });
+    outBuf = await KpopAssembler.writeOutput(merged, asmPlan);
     // 만든 결과를 바로 검증
     mainWb = XLSX.read(outBuf, { type: 'array', cellFormula: true, sheetStubs: true, cellNF: true });
     $('refDate').value = $('aRef').value; $('mainName').textContent = '조립 결과(방금 생성)'; $('runBtn').disabled = false;
@@ -374,18 +393,27 @@ function renderAsm(chk) {
       `</tbody></table></div>`;
   });
   $('rankWrap').innerHTML = h || '<p class="note">자동 순위 연도가 없어요. 원본 순서 그대로 만들었어요.</p>';
+  $('dlNewSrc').classList.toggle('hide', !updData);
+  if (updData) {
+    const cls = { 추가: 'r-add', 수정: 'r-mod', 삭제: 'r-del', 오류: 'r-err', 건너뜀: 'r-err' };
+    const cnt = (k) => updLog.filter(l => l.결과 === k).length;
+    $('updWrap').innerHTML = `<h3 style="margin:18px 0 4px;font-size:16px">업데이트 반영 — 추가 ${cnt('추가')} · 수정 ${cnt('수정')} · 삭제 ${cnt('삭제')}${cnt('오류') + cnt('건너뜀') ? ` · <span class="up">확인 필요 ${cnt('오류') + cnt('건너뜀')}</span>` : ''}</h3>
+    <div class="tablewrap"><table><thead><tr><th>행</th><th>결과</th><th>연도</th><th>아티스트</th><th>대상</th><th>내용</th><th>근거</th></tr></thead><tbody>` +
+      updLog.map(l => `<tr><td>${esc2(l.행)}</td><td class="${cls[l.결과] || ''}">${esc2(l.결과)}</td><td>${esc2(l.year)}</td><td>${esc2(l.artist)}</td><td>${esc2(l.대상)}</td><td>${esc2(l.내용)}</td><td class="muted" style="max-width:280px;word-break:break-all">${esc2(l.근거)}</td></tr>`).join('') + `</tbody></table></div>`;
+  } else $('updWrap').innerHTML = '';
   $('asmNotes').innerHTML = p.notes.length ? `<p class="note"><b>참고</b><br>${p.notes.map(n => esc2(`${n.year} ${n.artist} — ${n.kind}: ${n.detail}`)).join('<br>')}</p>` : '';
   $('asmTitle').textContent = `순위 산정 결과 (기준일 ${$('aRef').value})`;
 }
 $('dlOut').onclick = () => outBuf && saveBuf(outBuf, `k-pop_자료조사_데이터_${ymd()}.xlsx`);
 $('toChk').onclick = () => showTab('chk');
+$('dlNewSrc').onclick = async () => saveBuf(await KpopAssembler.writeSource(merged), `원본데이터_${$('aRef').value.slice(2).replace(/-/g, '')}.xlsx`);
 $('dlBasis').onclick = () => {
   const rows = [];
   asmPlan.autoYears.forEach(y => (asmPlan.rankings[y] || []).forEach(x => rows.push({ 연도: y, 순위: x.rank, 아티스트: x.artist, 합계: x.total, 공식누적: x.byOfficial, '공식누적 내역': x.usedOfficial.join(', '), '공식 관객수': x.byAtt, '수용인원×일수': x.byCap, 행수: x.rows, '수치 없는 행': x.blank, 상세수록: x.rank <= asmPlan.topN ? 'O' : '제외', '기존 목록 순위': ((asmPlan.listRank[y] || []).indexOf(x.artist) + 1) || '' })));
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = [{ wch: 6 }, { wch: 5 }, { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 36 }, { wch: 11 }, { wch: 13 }, { wch: 6 }, { wch: 10 }, { wch: 8 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, ws, '순위 산정 근거');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(srcData.official.map(o => ({ 집계묶음: o['집계묶음'], 연도: o.year, 아티스트: o.artist, 공식관객수: o['공식관객수'], 출처: o['출처'], 설명: o['설명'] }))), '공식누적 출처');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(merged.official.map(o => ({ 집계묶음: o['집계묶음'], 연도: o.year, 아티스트: o.artist, 공식관객수: o['공식관객수'], 출처: o['출처'], 설명: o['설명'] }))), '공식누적 출처');
   saveWb(wb, `순위산정근거_${$('aRef').value}.xlsx`);
 };
 </script>
