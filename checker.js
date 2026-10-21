@@ -11,7 +11,7 @@
 
   const SEV = { ERROR: '오류', WARN: '확인필요', INFO: '참고' };
 
-  const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[–—]/g, '-').replace(/\bthe\b/g, '').replace(/\s+/g, ' ').trim();
+  const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[-–—_.·]/g, ' ').replace(/\bthe\b/g, '').replace(/\s+/g, ' ').trim();
   const isNum = (v) => typeof v === 'number' && isFinite(v);
   // 엑셀 날짜(일련번호)를 시간대 영향 없이 UTC 자정 날짜로 변환
   const toDate = (v) => {
@@ -224,7 +224,10 @@
       const S = sub.rows, SC = sub.col;
       if (S.length !== R.length) add(SEV.ERROR, '두 시트 불일치', SUB, null, `행 수가 달라요: '${MAIN}' ${R.length}행 / '${SUB}' ${S.length}행`);
       const n = Math.min(S.length, R.length);
-      const fields = ['year', 'artist', 'days', 'country', 'city', 'location', 'capacity', 'attendance'];
+      const fields = ['year', 'artist', 'type', 'start_date', 'end_date', 'days', 'country', 'city', 'location', 'capacity', 'attendance', 'ticket_price', 'remarks'];
+      // 두 시트 변수 구성 동일 여부 (2026-10-21 박사님 요청)
+      const missing = Object.keys(C).filter(h => h && !SC[h]);
+      if (missing.length) add(SEV.ERROR, '두 시트 변수 불일치', SUB, null, `'${SUB}' 시트에 없는 변수: ${missing.join(', ')} — 두 시트 변수는 같아야 해요.`);
       let reported = 0;
       for (let i = 0; i < n; i++) {
         const a = R[i], b = S[i];

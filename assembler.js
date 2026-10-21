@@ -5,10 +5,11 @@
   const MAIN = '해외 공연 현황', SUB = '해외 공연 현황 (2)', LIST = '연도별 아티스트 목록', VARS = '변수 설명';
   const FIELDS = ['year', 'artist', 'type', 'start_date', 'end_date', 'days', 'country', 'city', 'location', 'capacity', 'attendance', 'attendance_label', 'ticket_price', 'remarks', 'gender', 'member', 'deyear', 'demon', 'deday', 'agency', 'agency2', 'agency3', 'attendance/days', 'attendance_rule', '집계묶음', '출처'];
   const MAIN_HDR = ['no', 'year', 'qt', 'artist', 'type', 'start_date', 'end_date', 'days', 'country', 'city', 'location', 'capacity', 'capacity*days', 'attendance', 'attendance/days', 'ticket_price', 'remarks', 'gender', 'member', 'deyear', 'demon', 'deday', 'agency', 'agency2', 'agency3'];
-  const SUB_HDR = ['no', 'year', 'qt', 'artist', 'type', 'days', 'country', 'city', 'location', 'capacity', 'capacity*days', 'attendance', 'attendance/days', 'gender', 'member', 'deyear', 'demon', 'deday', 'agency', 'agency2', 'agency3'];
+  // (2) 시트도 본 시트와 같은 25개 변수 (2026-10-21 박사님 요청: 두 시트 변수 동일)
+  const SUB_HDR = MAIN_HDR.slice();
   const FILL_PLAN = 'FFFFF2CC', FILL_PART = 'FFFCE4D6';
 
-  const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[–—]/g, '-').replace(/\bthe\b/g, '').replace(/\s+/g, ' ').trim();
+  const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[-–—_.·]/g, ' ').replace(/\bthe\b/g, '').replace(/\s+/g, ' ').trim();
   const isNum = (v) => typeof v === 'number' && isFinite(v);
   const serialToDate = (v) => {
     if (v instanceof Date) return new Date(Date.UTC(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate()));
@@ -220,24 +221,24 @@
       const ruleCD = !!r.attendance_rule && isNum(cap);   // 원자료처럼 attendance = 수용인원×일수 수식
       const cdRes = isNum(cap) && isNum(r.days) ? cap * r.days : undefined;
       const attM = ruleCD ? { formula: `$L${n}*$H${n}`, result: cdRes } : (att ?? null);
-      const attS = ruleCD ? { formula: `$J${n}*$F${n}`, result: cdRes } : (att ?? null);
+      const attS = ruleCD ? { formula: `$L${n}*$H${n}`, result: cdRes } : (att ?? null);
       const rem = r.__tag ? (r.__tag + ' ' + (r.remarks || '')).trim() : (r.remarks || null);
       const qtVal = r.start_date instanceof Date ? Math.floor(r.start_date.getUTCMonth() / 3) + 1 : null;
       const m = [i + 1, r.year, r.start_date instanceof Date ? { formula: `ROUNDUP(MONTH(F${n})/3,0)`, result: qtVal } : null, r.artist, r.type, r.start_date, r.end_date, r.days, r.country, r.city, r.location, hasCap ? cap : null,
         hasCap ? { formula: `$L${n}*$H${n}`, result: isNum(cap) && isNum(r.days) ? cap * r.days : undefined } : null, attM, apd, r.ticket_price ?? null, rem,
         r.gender ?? null, r.member ?? null, r.deyear ?? null, r.demon ?? null, r.deday ?? null, r.agency ?? null, r.agency2 ?? null, r.agency3 ?? null];
-      // (2) 시트는 원본처럼 숫자 capacity만 기입('-' 등 텍스트는 공란)
-      const s = [i + 1, r.year, qtVal, r.artist, r.type, r.days, r.country, r.city, r.location, isNum(cap) ? cap : null,
-        isNum(cap) ? { formula: `$J${n}*$F${n}`, result: isNum(cap) && isNum(r.days) ? cap * r.days : undefined } : null, attS, apd,
+      // (2) 시트: 본 시트와 같은 열 구성. 원본처럼 qt는 값, capacity는 숫자만('-' 등 텍스트는 공란)
+      const s = [i + 1, r.year, qtVal, r.artist, r.type, r.start_date, r.end_date, r.days, r.country, r.city, r.location, isNum(cap) ? cap : null,
+        isNum(cap) ? { formula: `$L${n}*$H${n}`, result: isNum(cap) && isNum(r.days) ? cap * r.days : undefined } : null, attS, apd, r.ticket_price ?? null, rem,
         r.gender ?? null, r.member ?? null, r.deyear ?? null, r.demon ?? null, r.deday ?? null, r.agency ?? null, r.agency2 ?? null, r.agency3 ?? null];
       const mr = main.addRow(m), sr = sub.addRow(s);
-      mr.getCell(6).numFmt = mr.getCell(7).numFmt = 'yyyy-mm-dd';
+      [mr, sr].forEach(row => { row.getCell(6).numFmt = row.getCell(7).numFmt = 'yyyy-mm-dd'; });
       const NUMF = '_-* #,##0_-;\\-* #,##0_-;_-* "-"_-;_-@_-';
-      [[mr, [12, 13, 14, 15]], [sr, [10, 11, 12, 13]]].forEach(([row, cols]) => cols.forEach(c => row.getCell(c).numFmt = NUMF));
-      if (r.attendance_label && isNum(att)) { const f = `#,##0" (${r.attendance_label})"`; mr.getCell(14).numFmt = f; sr.getCell(12).numFmt = f; }
+      [mr, sr].forEach(row => [12, 13, 14, 15].forEach(c => row.getCell(c).numFmt = NUMF));
+      if (r.attendance_label && isNum(att)) { const f = `#,##0" (${r.attendance_label})"`; mr.getCell(14).numFmt = f; sr.getCell(14).numFmt = f; }
       const fill = r.__tag === '[예정]' ? FILL_PLAN : r.__tag === '[일부 예정]' ? FILL_PART : null;
       [mr, sr].forEach(row => row.eachCell({ includeEmpty: true }, (c, col) => {
-        if (col > (row === mr ? 25 : 21)) return;
+        if (col > 25) return;
         if (c.value !== null && c.value !== undefined && c.value !== '') c.border = border;
         if (fill) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
       }));

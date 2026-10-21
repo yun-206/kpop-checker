@@ -54,3 +54,7 @@ GitHub 저장소에 `index.html`, `checker.js`, `assembler.js`, `README.md`, `.g
 - 공연장 마스터 채우기 탭
 - GitHub Actions로 투어 문서 주간 변경 감시 → Issue 알림
 - 위키피디아 투어 문서 → 공연목록 초안 행
+
+## 변경 (2026-10-21)
+- '해외 공연 현황 (2)' 시트도 본 시트와 같은 25개 변수로 출력(start_date·end_date·ticket_price·remarks 추가). qt는 값, capacity는 숫자만 넣는 기존 (2) 방식은 유지.
+- 검증: 두 시트 변수 구성이 다르면 '두 시트 변수 불일치' 오류. 두 시트 대조 항목에 type·start_date·end_date·ticket_price·remarks 추가.
