@@ -1,421 +1,251 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>K-pop 해외공연 데이터 도구</title>
-<meta name="description" content="K-pop 해외공연 데이터셋 엑셀을 브라우저 안에서 검증합니다. 파일은 외부로 전송되지 않습니다.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="checker.js"></script>
-<script src="assembler.js"></script>
-<style>
-:root{
-  --bg:#f6f7f9;--card:#fff;--ink:#16181d;--muted:#5d6470;--line:#e3e6eb;--accent:#3b5bdb;
-  --err:#c92a2a;--err-bg:#fff0f0;--warn:#b35c00;--warn-bg:#fff6e6;--info:#2f6f9f;--info-bg:#eef6fc;
-}
-@media (prefers-color-scheme: dark){
-  :root{--bg:#111318;--card:#1a1d24;--ink:#e9ecf1;--muted:#9aa2ae;--line:#2b2f38;--accent:#7c95ff;
-  --err:#ff8787;--err-bg:#3a1d1f;--warn:#ffb35c;--warn-bg:#3a2a14;--info:#74c0fc;--info-bg:#15283a;}
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Noto Sans KR",system-ui,sans-serif}
-header{padding:28px 16px 8px;max-width:1180px;margin:0 auto}
-h1{font-size:22px;margin:0 0 4px}
-.sub{color:var(--muted);margin:0}
-main{max-width:1180px;margin:0 auto;padding:12px 16px 48px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:14px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-.r-add{color:var(--info);font-weight:700}.r-mod{color:var(--warn);font-weight:700}.r-del{color:var(--err);font-weight:700}.r-err{color:var(--err);font-weight:700;background:var(--err-bg)}
-.drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:.15s}
-.drop:hover,.drop.over{border-color:var(--accent)}
-.drop b{display:block;margin-bottom:4px}
-.drop small{color:var(--muted)}
-label.f{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-input[type=date],input[type=number],input[type=search],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
-button{padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button:disabled{opacity:.45;cursor:not-allowed}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.stat{border-radius:10px;padding:12px 14px;border:1px solid var(--line)}
-.stat .n{font-size:26px;font-weight:700}
-.stat.e{background:var(--err-bg);color:var(--err)}.stat.w{background:var(--warn-bg);color:var(--warn)}.stat.i{background:var(--info-bg);color:var(--info)}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.chip{font-size:13px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);cursor:pointer;user-select:none}
-.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.tablewrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}
-table{border-collapse:collapse;width:100%;min-width:860px;font-size:13.5px}
-th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-th{position:sticky;top:0;background:var(--card);font-weight:500;color:var(--muted)}
-.sev{font-weight:700;white-space:nowrap}
-.sev.e{color:var(--err)}.sev.w{color:var(--warn)}.sev.i{color:var(--info)}
-.muted{color:var(--muted)}
-.note{font-size:13px;color:var(--muted);margin-top:8px}
-.hide{display:none}
-.tabs{display:flex;gap:4px;max-width:1180px;margin:0 auto;padding:0 16px;flex-wrap:wrap}
-.tab{padding:9px 16px;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;background:transparent;color:var(--muted)}
-.tab.on{background:var(--card);color:var(--ink);font-weight:700}
-.up{color:var(--err);font-weight:700}.down{color:var(--info);font-weight:700}.same{color:var(--muted)}
-td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-ol.steps{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13.5px}
-footer{max-width:1180px;margin:0 auto;padding:0 16px 32px;color:var(--muted);font-size:12.5px}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>K-pop 해외공연 데이터 도구</title>
+  <meta name="description" content="K-pop 해외공연 데이터셋 엑셀을 브라우저 안에서 조립·검증합니다. 파일은 외부로 전송되지 않습니다.">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230071e3'/%3E%3Cpath d='M9 22V10m7 12V14m7 8v-5' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" defer></script>
+  <script src="checker.js" defer></script>
+  <script src="assembler.js" defer></script>
+  <script src="js/app.js" defer></script>
 </head>
 <body>
-<header>
-  <h1>K-pop 해외공연 데이터 도구</h1>
-  <p class="sub">원본 데이터로 결과 엑셀을 만들고(순위 자동 산정), 규칙 위반을 검사해요. 파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않아요.</p>
-</header>
-<nav class="tabs">
-  <button class="tab on" data-tab="asm">① 조립·순위</button>
-  <button class="tab" data-tab="chk">② 검증</button>
-  <button class="tab" data-tab="cnv">③ 원본 변환 (처음 1회)</button>
-</nav>
-<main>
-<div id="pane-asm">
-  <section class="card">
-    <b>원본 데이터 → 결과 엑셀</b>
-    <ol class="steps">
-      <li>원본 데이터 파일을 올려요. 새 공연이 있으면 업데이트 파일도 같이 올려요(합쳐서 계산).</li>
-      <li>자동 순위 연도는 공식 관객수 → (없으면) 수용인원×일수로 합산하고, 공식누적 시트의 묶음은 공식 합계를 한 번만 더해요.</li>
-      <li>결과 엑셀은 박사님 양식(두 시트·목록·변수 설명)으로 나오고, 만들자마자 ② 검증을 자동으로 돌려요.</li>
-    </ol>
-    <div class="grid" style="margin-top:12px">
-      <div>
-        <label class="f">원본 데이터 .xlsx</label>
-        <div class="drop" id="dropSrc"><b>여기에 끌어다 놓거나 클릭</b><small id="srcName">'공연목록' 시트가 있는 원본 데이터</small></div>
-        <input type="file" id="fileSrc" accept=".xlsx" class="hide">
-      </div>
-      <div>
-        <label class="f">업데이트 파일 .xlsx (선택)</label>
-        <div class="drop" id="dropUpd"><b>추가·수정·삭제할 행</b><small id="updName">'업데이트' 시트가 있는 파일</small></div>
-        <input type="file" id="fileUpd" accept=".xlsx" class="hide">
-        <p class="note" style="margin-top:6px"><a href="#" id="dlTpl">빈 업데이트 양식 받기</a></p>
-      </div>
-      <div>
-        <label class="f" for="aRef">기준일 ([예정] 표시)</label><input type="date" id="aRef">
-        <label class="f" for="aYears" style="margin-top:10px">자동 순위 연도 (쉼표)</label><input type="search" id="aYears" placeholder="2026">
-      </div>
-      <div>
-        <label class="f" for="aTop">상위 N팀 상세 수록</label><input type="number" id="aTop" value="15" min="1" max="50">
-        <label class="f" style="margin-top:10px">&nbsp;</label>
-        <div class="row"><button class="primary" id="asmBtn" disabled>결과 엑셀 만들기</button></div>
-      </div>
+  <a class="skip" href="#main">본문으로 건너뛰기</a>
+
+  <!-- 상단 바 -->
+  <header class="bar" id="bar">
+    <div class="bar__inner">
+      <a class="bar__brand" href="#top" aria-label="K-pop 해외공연 데이터 도구, 처음으로">
+        <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M9 22V10m7 12V14m7 8v-5" stroke="var(--brand-ink)" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>공연 데이터 도구</span>
+      </a>
+      <nav class="seg" role="tablist" aria-label="작업 선택">
+        <span class="seg__thumb" id="segThumb" aria-hidden="true"></span>
+        <button class="tab on" role="tab" id="tab-asm" data-tab="asm" aria-selected="true" aria-controls="pane-asm">조립·순위</button>
+        <button class="tab" role="tab" id="tab-chk" data-tab="chk" aria-selected="false" aria-controls="pane-chk" tabindex="-1">검증</button>
+        <button class="tab" role="tab" id="tab-cnv" data-tab="cnv" aria-selected="false" aria-controls="pane-cnv" tabindex="-1">원본 변환</button>
+      </nav>
+      <p class="bar__privacy" title="파일은 이 브라우저 안에서만 처리돼요">
+        <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5 3 3.5v4c0 3.2 2.1 5.8 5 7 2.9-1.2 5-3.8 5-7v-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>브라우저 안에서만 처리</span>
+      </p>
     </div>
-    <p class="muted" id="asmStatus" style="margin:10px 0 0"></p>
-  </section>
-  <section class="card hide" id="asmResult">
-    <div class="row" style="justify-content:space-between">
-      <b id="asmTitle">순위 산정 결과</b>
-      <div class="row"><button class="primary" id="dlOut">결과 엑셀 받기</button><button id="dlNewSrc" class="hide">새 원본 받기</button><button id="dlBasis">산정 근거 .xlsx</button><button id="toChk">검증 결과 보기</button></div>
-    </div>
-    <div class="stats" id="asmStats" style="margin-top:12px"></div>
-    <div id="updWrap"></div>
-    <div id="rankWrap"></div>
-    <div id="asmNotes"></div>
-  </section>
-</div>
+  </header>
 
-<div id="pane-cnv" class="hide">
-  <section class="card">
-    <b>기존 결과 엑셀 → 원본 데이터 파일</b>
-    <ol class="steps">
-      <li>지금까지 쓰던 엑셀(해외 공연 현황 시트가 있는 파일)을 올리면 원본 데이터 파일로 바꿔줘요.</li>
-      <li>[예정] 태그는 떼고, attendance의 "(소속사 제공)" 같은 표시는 attendance_label 열로 옮겨요. 원자료에서 attendance가 수식(수용인원×일수)이던 행은 attendance_rule 열에 표시해요.</li>
-      <li>공연장마스터는 기존 기입값으로 초안만 만들어요. <b>source(출처)를 적은 공연장만</b> 빈 capacity를 채우는 데 쓰여요.</li>
-      <li>공식누적 시트에 공식 합계(예: 돔 4회 합계 17만 명)를 적고, 공연목록의 집계묶음 열에 같은 이름을 적으면 순위 산정에 반영돼요.</li>
-    </ol>
-    <div class="grid" style="margin-top:12px">
-      <div>
-        <div class="drop" id="dropLeg"><b>기존 엑셀 올리기</b><small id="legName">'해외 공연 현황' 시트가 있는 .xlsx</small></div>
-        <input type="file" id="fileLeg" accept=".xlsx" class="hide">
+  <main id="main">
+
+    <!-- ================= ① 조립·순위 ================= -->
+    <section class="pane" id="pane-asm" role="tabpanel" aria-labelledby="tab-asm">
+      <header class="hero" id="top">
+        <h1>원본 데이터를 올리면<br>결과 엑셀과 순위가 나옵니다.</h1>
+        <p>박사님 양식 그대로 만들고, 만들자마자 21개 규칙으로 검증까지 끝냅니다.</p>
+      </header>
+
+      <ol class="flow" aria-label="사용 순서">
+        <li><span class="flow__no">1</span><div><h2>파일 올리기</h2><p>원본 데이터를 올려요. 새 공연이 있으면 업데이트 파일도 함께 올리면 합쳐서 계산해요.</p></div></li>
+        <li><span class="flow__no">2</span><div><h2>순위 산정</h2><p>공식 관객수, 없으면 수용인원×일수로 합산해요. 공식누적 묶음은 공식 합계를 한 번만 더해요.</p></div></li>
+        <li><span class="flow__no">3</span><div><h2>받기와 검증</h2><p>결과 엑셀을 받고, 검증 결과를 바로 확인해요.</p></div></li>
+      </ol>
+
+      <div class="panel">
+        <div class="panel__grid">
+          <div class="field">
+            <span class="field__label" id="lbl-src">원본 데이터</span>
+            <div class="drop" id="dropSrc" role="button" tabindex="0" aria-labelledby="lbl-src srcName">
+              <span class="drop__icon" aria-hidden="true"></span>
+              <b>끌어다 놓거나 눌러서 선택</b>
+              <small id="srcName">'공연목록' 시트가 있는 .xlsx</small>
+            </div>
+            <input type="file" id="fileSrc" accept=".xlsx" class="hide">
+          </div>
+          <div class="field">
+            <span class="field__label" id="lbl-upd">업데이트 파일 <em>선택</em></span>
+            <div class="drop" id="dropUpd" role="button" tabindex="0" aria-labelledby="lbl-upd updName">
+              <span class="drop__icon" aria-hidden="true"></span>
+              <b>추가·수정·삭제할 행</b>
+              <small id="updName">'업데이트' 시트가 있는 .xlsx</small>
+            </div>
+            <input type="file" id="fileUpd" accept=".xlsx" class="hide">
+            <a href="#" class="link link--sm" id="dlTpl">빈 업데이트 양식 받기</a>
+          </div>
+        </div>
+
+        <div class="settings">
+          <label class="field">
+            <span class="field__label">기준일</span>
+            <input type="date" id="aRef">
+            <span class="field__hint">이 날짜 이후 공연은 [예정]으로 표시돼요.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">자동 순위 연도</span>
+            <input type="search" id="aYears" placeholder="2026" inputmode="numeric">
+            <span class="field__hint">여러 해는 쉼표로 구분해요.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">상세 수록 팀 수</span>
+            <input type="number" id="aTop" value="15" min="1" max="50">
+            <span class="field__hint">이보다 아래 순위는 비고에 요약돼요.</span>
+          </label>
+        </div>
+
+        <div class="panel__foot">
+          <p class="status" id="asmStatus" role="status" aria-live="polite"></p>
+          <button class="btn btn--primary btn--lg" id="asmBtn" disabled>결과 엑셀 만들기</button>
+        </div>
       </div>
-      <div><button class="primary" id="cnvBtn" disabled>원본 데이터 파일 받기</button><p class="note" id="cnvStatus"></p></div>
-    </div>
-  </section>
-</div>
 
-<div id="pane-chk" class="hide">
-  <section class="card">
-    <div class="grid">
-      <div>
-        <label class="f">① 데이터셋 엑셀 (필수)</label>
-        <div class="drop" id="dropMain"><b>여기에 끌어다 놓거나 클릭</b><small id="mainName">'해외 공연 현황' 시트가 있는 .xlsx</small></div>
-        <input type="file" id="fileMain" accept=".xlsx,.xlsm" class="hide">
+      <div class="panel panel--result hide" id="asmResult">
+        <div class="result-head">
+          <h2 id="asmTitle">순위 산정 결과</h2>
+          <div class="actions">
+            <button class="btn btn--primary" id="dlOut">결과 엑셀 받기</button>
+            <button class="btn btn--ghost hide" id="dlNewSrc">새 원본 받기</button>
+            <button class="btn btn--ghost" id="dlBasis">산정 근거 받기</button>
+            <button class="btn btn--plain" id="toChk">검증 결과 보기 <span aria-hidden="true">›</span></button>
+          </div>
+        </div>
+        <div class="stats" id="asmStats"></div>
+        <div id="updWrap"></div>
+        <div id="rankWrap"></div>
+        <div id="asmNotes"></div>
       </div>
-      <div>
-        <label class="f">② 공연장 마스터 (선택)</label>
-        <div class="drop" id="dropVenue"><b>공연장 마스터 .xlsx</b><small id="venueName">location · city · capacity · source 열</small></div>
-        <input type="file" id="fileVenue" accept=".xlsx,.csv" class="hide">
+    </section>
+
+    <!-- ================= ② 검증 ================= -->
+    <section class="pane hide" id="pane-chk" role="tabpanel" aria-labelledby="tab-chk">
+      <header class="hero">
+        <h1>규칙 위반을<br>행 단위로 찾아냅니다.</h1>
+        <p>오류 후보를 보여줄 뿐, 최종 판단은 출처를 확인한 사람이 합니다.</p>
+      </header>
+
+      <div class="panel">
+        <div class="panel__grid">
+          <div class="field">
+            <span class="field__label" id="lbl-main">데이터셋 엑셀</span>
+            <div class="drop" id="dropMain" role="button" tabindex="0" aria-labelledby="lbl-main mainName">
+              <span class="drop__icon" aria-hidden="true"></span>
+              <b>끌어다 놓거나 눌러서 선택</b>
+              <small id="mainName">'해외 공연 현황' 시트가 있는 .xlsx</small>
+            </div>
+            <input type="file" id="fileMain" accept=".xlsx,.xlsm" class="hide">
+          </div>
+          <div class="field">
+            <span class="field__label" id="lbl-venue">공연장 마스터 <em>선택</em></span>
+            <div class="drop" id="dropVenue" role="button" tabindex="0" aria-labelledby="lbl-venue venueName">
+              <span class="drop__icon" aria-hidden="true"></span>
+              <b>공연장 마스터 .xlsx</b>
+              <small id="venueName">location, city, capacity, source 열</small>
+            </div>
+            <input type="file" id="fileVenue" accept=".xlsx,.csv" class="hide">
+          </div>
+        </div>
+
+        <div class="settings settings--two">
+          <label class="field">
+            <span class="field__label">기준일</span>
+            <input type="date" id="refDate">
+            <span class="field__hint">[예정] 표시가 맞는지 이 날짜로 판단해요.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">엄격 검사 시작 연도</span>
+            <input type="number" id="strictFrom" value="2025" min="2010" max="2100">
+            <span class="field__hint">이 연도부터는 규칙을 모두 적용해요.</span>
+          </label>
+        </div>
+
+        <div class="panel__foot">
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+          <button class="btn btn--primary btn--lg" id="runBtn" disabled>검사 실행</button>
+        </div>
       </div>
-      <div>
-        <label class="f" for="refDate">기준일 ([예정] 판단)</label>
-        <input type="date" id="refDate">
-        <label class="f" for="strictFrom" style="margin-top:10px">엄격 검사 시작 연도</label>
-        <input type="number" id="strictFrom" value="2025" min="2010" max="2100">
+
+      <div class="panel panel--result hide" id="resultCard">
+        <div class="stats" id="stats"></div>
+
+        <div class="filters">
+          <label class="field">
+            <span class="field__label">연도 범위</span>
+            <span class="range"><input type="number" id="yearFrom" aria-label="시작 연도"><span aria-hidden="true">–</span><input type="number" id="yearTo" aria-label="끝 연도"></span>
+          </label>
+          <label class="field field--grow">
+            <span class="field__label">검색</span>
+            <input type="search" id="q" placeholder="아티스트나 내용, 예: Kai Tak, BTS">
+          </label>
+          <div class="field">
+            <span class="field__label">내보내기</span>
+            <span class="actions"><button class="btn btn--ghost" id="dlXlsx">오류 리포트</button><button class="btn btn--ghost" id="dlVenue">공연장 마스터 초안</button></span>
+          </div>
+        </div>
+
+        <div class="chips" id="sevChips" aria-label="등급 필터"></div>
+        <div class="chips chips--checks" id="checkChips" aria-label="검사 항목 필터"></div>
+
+        <div class="tablewrap tablewrap--tall"><table>
+          <thead><tr><th>등급</th><th>검사 항목</th><th>시트</th><th class="num">엑셀 행</th><th class="num">no</th><th class="num">연도</th><th>아티스트</th><th>내용</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table></div>
+        <p class="note" id="shown"></p>
       </div>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <button class="primary" id="runBtn" disabled>검사 실행</button>
-      <span class="muted" id="status"></span>
-    </div>
-  </section>
 
-  <section class="card hide" id="resultCard">
-    <div class="stats" id="stats"></div>
-    <div class="grid" style="margin-top:14px">
-      <div><label class="f" for="yearFrom">연도 범위</label>
-        <div class="row"><input type="number" id="yearFrom" style="flex:1"> <span class="muted">~</span> <input type="number" id="yearTo" style="flex:1"></div></div>
-      <div><label class="f" for="q">검색 (아티스트·내용)</label><input type="search" id="q" placeholder="예: Kai Tak, BTS"></div>
-      <div><label class="f">내보내기</label>
-        <div class="row"><button id="dlXlsx">오류 리포트 .xlsx</button><button id="dlVenue">공연장 마스터 초안</button></div></div>
-    </div>
-    <div class="chips" id="sevChips"></div>
-    <div class="chips" id="checkChips"></div>
-    <div class="tablewrap"><table>
-      <thead><tr><th>등급</th><th>검사 항목</th><th>시트</th><th>엑셀 행</th><th>no</th><th>연도</th><th>아티스트</th><th>내용</th></tr></thead>
-      <tbody id="tbody"></tbody>
-    </table></div>
-    <p class="note" id="shown"></p>
-  </section>
+      <details class="panel panel--quiet rules">
+        <summary>검사하는 규칙 보기</summary>
+        <ul class="rules__list">
+          <li>국내 공연 포함</li><li>관객수가 수용인원보다 큼</li><li>capacity에 여러 날 합계 의심</li>
+          <li>관객수 = 수용인원 × 일수 (복사 의심)</li><li>같은 공연장 capacity 불일치</li><li>공연장 마스터와 대조</li>
+          <li>그룹 블록 끊김</li><li>연도별 목록 순위와 블록 순서</li><li>블록 안 날짜순</li>
+          <li>목록 밖(16위 이하) 상세 행</li><li>두 시트 값·변수 불일치</li><li>수식이 다른 행 참조</li>
+          <li>no 연번</li><li>분기(qt)</li><li>날짜와 일수 모순</li>
+          <li>중복 행</li><li>[예정]·[일부 예정] 표시 누락</li><li>끝난 [예정] 공연</li>
+        </ul>
+      </details>
+    </section>
 
-  <section class="card">
-    <b>검사 항목</b>
-    <p class="note" style="margin-top:6px">국내 공연 포함 · 관객수 &gt; 수용인원 · capacity에 여러 날 합계 의심 · 관객수=수용인원×일수(복사 의심) · 같은 공연장 capacity 불일치 · 공연장 마스터 대조 · 그룹 블록 끊김 · 연도별 목록 순위와 블록 순서 · 블록 안 날짜순 · 목록 밖(16위 이하) 상세 행 · 두 시트 값 불일치 · 수식이 다른 행 참조 · no 연번 · 분기(qt) · 날짜/일수 모순 · 중복 행 · [예정]/[일부 예정] 표시 누락 · 끝난 [예정] 공연</p>
-  </section>
-</div>
-</main>
-<footer>공식 기관 자료 기준: attendance는 공식 출처가 있는 값만, 추정·애매하면 공란. 이 도구는 오류 후보를 찾아줄 뿐이고 최종 판단은 출처 확인 후 사람이 합니다.</footer>
+    <!-- ================= ③ 원본 변환 ================= -->
+    <section class="pane hide" id="pane-cnv" role="tabpanel" aria-labelledby="tab-cnv">
+      <header class="hero">
+        <h1>쓰던 결과 엑셀을<br>원본 데이터로 바꿉니다.</h1>
+        <p>처음 한 번만 하면 돼요. 이후로는 원본 데이터로 조립합니다.</p>
+      </header>
 
-<script>
-const $ = (id) => document.getElementById(id);
-let mainWb = null, venueMaster = null, result = null;
-const today = new Date();
-$('refDate').value = today.toISOString().slice(0, 10);
+      <div class="panel panel--narrow">
+        <div class="field">
+          <span class="field__label" id="lbl-leg">기존 결과 엑셀</span>
+          <div class="drop" id="dropLeg" role="button" tabindex="0" aria-labelledby="lbl-leg legName">
+            <span class="drop__icon" aria-hidden="true"></span>
+            <b>끌어다 놓거나 눌러서 선택</b>
+            <small id="legName">'해외 공연 현황' 시트가 있는 .xlsx</small>
+          </div>
+          <input type="file" id="fileLeg" accept=".xlsx" class="hide">
+        </div>
+        <div class="panel__foot">
+          <p class="status" id="cnvStatus" role="status" aria-live="polite"></p>
+          <button class="btn btn--primary btn--lg" id="cnvBtn" disabled>원본 데이터 파일 받기</button>
+        </div>
+      </div>
 
-function bindDrop(drop, input, onFile) {
-  drop.onclick = () => input.click();
-  input.onchange = () => input.files[0] && onFile(input.files[0]);
-  drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); };
-  drop.ondragleave = () => drop.classList.remove('over');
-  drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && onFile(e.dataTransfer.files[0]); };
-}
-const readWb = (file) => file.arrayBuffer().then(buf => XLSX.read(buf, { cellFormula: true, sheetStubs: true, cellNF: true }));
+      <div class="panel panel--quiet">
+        <h2 class="panel__title">변환하면 이렇게 바뀌어요</h2>
+        <ul class="bullets">
+          <li>[예정] 태그는 떼고, attendance의 "(소속사 제공)" 같은 표시는 attendance_label 열로 옮겨요.</li>
+          <li>원자료에서 attendance가 수식(수용인원×일수)이던 행은 attendance_rule 열에 표시해요.</li>
+          <li>공연장마스터는 기존 기입값으로 초안만 만들어요. source(출처)를 적은 공연장만 빈 capacity를 채우는 데 쓰여요.</li>
+          <li>공식누적 시트에 공식 합계(예: 돔 4회 합계 17만 명)를 적고, 공연목록의 집계묶음 열에 같은 이름을 적으면 순위 산정에 반영돼요.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
 
-bindDrop($('dropMain'), $('fileMain'), async (f) => {
-  $('status').textContent = '불러오는 중…';
-  try { mainWb = await readWb(f); $('mainName').textContent = f.name; $('runBtn').disabled = false; $('status').textContent = `시트: ${mainWb.SheetNames.join(', ')}`; }
-  catch (e) { $('status').textContent = '파일을 읽지 못했어요: ' + e.message; }
-});
-bindDrop($('dropVenue'), $('fileVenue'), async (f) => {
-  try { venueMaster = KpopChecker.parseVenueMaster(await readWb(f)); $('venueName').textContent = `${f.name} · 공연장 ${venueMaster.size}곳`; }
-  catch (e) { $('venueName').textContent = '읽기 실패: ' + e.message; }
-});
-
-const SEVS = [['오류', 'e'], ['확인필요', 'w'], ['참고', 'i']];
-let sevOn = new Set(['오류', '확인필요']), checkOn = null;
-
-$('runBtn').onclick = () => runCheck();
-function runCheck() {
-  const [y, m, d] = $('refDate').value.split('-').map(Number);
-  const t0 = performance.now();
-  result = KpopChecker.run(mainWb, { refDate: new Date(y, m - 1, d), venueMaster, strictFrom: Number($('strictFrom').value) || 2025 });
-  $('status').textContent = `${result.stats.rows.toLocaleString()}행 검사 완료 (${Math.round(performance.now() - t0)}ms)`;
-  const yrs = result.stats.years || [];
-  $('yearFrom').value = Number($('strictFrom').value) || yrs[0] || '';
-  $('yearTo').value = yrs[yrs.length - 1] || '';
-  checkOn = null;
-  $('resultCard').classList.remove('hide');
-  render();
-  return result;
-}
-
-function filtered() {
-  const yf = Number($('yearFrom').value) || 0, yt = Number($('yearTo').value) || 9999, q = $('q').value.trim().toLowerCase();
-  return result.issues.filter(i => {
-    const y = Number(i.year);
-    const yearOk = !i.year || (y >= yf && y <= yt) || i.artist === '(여러 아티스트)';
-    const qOk = !q || (`${i.artist} ${i.detail} ${i.check}`).toLowerCase().includes(q);
-    return yearOk && qOk;
-  });
-}
-
-function render() {
-  const base = filtered();
-  const cnt = (s) => base.filter(i => i.sev === s).length;
-  $('stats').innerHTML = SEVS.map(([s, c]) => `<div class="stat ${c}"><div>${s}</div><div class="n">${cnt(s).toLocaleString()}</div></div>`).join('')
-    + `<div class="stat"><div>검사한 행</div><div class="n">${result.stats.rows.toLocaleString()}</div></div>`;
-  $('sevChips').innerHTML = SEVS.map(([s]) => `<span class="chip ${sevOn.has(s) ? 'on' : ''}" data-sev="${s}">${s} ${cnt(s)}</span>`).join('');
-  const checks = {};
-  base.filter(i => sevOn.has(i.sev)).forEach(i => checks[i.check] = (checks[i.check] || 0) + 1);
-  $('checkChips').innerHTML = `<span class="chip ${!checkOn ? 'on' : ''}" data-check="">전체</span>` +
-    Object.entries(checks).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span class="chip ${checkOn === c ? 'on' : ''}" data-check="${c}">${c} ${n}</span>`).join('');
-  const rows = base.filter(i => sevOn.has(i.sev) && (!checkOn || i.check === checkOn));
-  const cls = { '오류': 'e', '확인필요': 'w', '참고': 'i' };
-  const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  $('tbody').innerHTML = rows.slice(0, 2000).map(i => `<tr><td class="sev ${cls[i.sev]}">${i.sev}</td><td>${esc(i.check)}</td><td class="muted">${i.sheet === '해외 공연 현황' ? '본' : '(2)'}</td><td>${i.excelRow}</td><td>${esc(i.no)}</td><td>${esc(i.year)}</td><td>${esc(i.artist)}</td><td>${esc(i.detail)}</td></tr>`).join('');
-  $('shown').textContent = `${rows.length.toLocaleString()}건 표시${rows.length > 2000 ? ' (화면엔 앞 2,000건, 다운로드엔 전부)' : ''}`;
-  document.querySelectorAll('[data-sev]').forEach(el => el.onclick = () => { const s = el.dataset.sev; sevOn.has(s) ? sevOn.delete(s) : sevOn.add(s); render(); });
-  document.querySelectorAll('[data-check]').forEach(el => el.onclick = () => { checkOn = el.dataset.check || null; render(); });
-}
-['yearFrom', 'yearTo', 'q'].forEach(id => $(id).oninput = () => result && render());
-
-function saveWb(wb, name) {
-  const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const url = URL.createObjectURL(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-$('dlXlsx').onclick = () => {
-  const rows = filtered().map(i => ({ 등급: i.sev, 검사항목: i.check, 시트: i.sheet, 엑셀행: i.excelRow, no: i.no, 연도: i.year, 아티스트: i.artist, 내용: i.detail, 제안값: i.suggest ?? '' }));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 16 }, { wch: 8 }, { wch: 7 }, { wch: 7 }, { wch: 16 }, { wch: 90 }, { wch: 10 }];
-  XLSX.utils.book_append_sheet(wb, ws, '검증 결과');
-  saveWb(wb, `검증리포트_${$('refDate').value}.xlsx`);
-};
-$('dlVenue').onclick = () => {
-  const rows = result.venues.sort((a, b) => b.count - a.count).map(v => ({
-    location: v.location, city: v.city, country: v.country,
-    capacity: v.values.length === 1 ? v.values[0] : '',
-    source: '',
-    '기존 기입값': v.values.join(' / '),
-    '상태': v.values.length > 1 ? '값 불일치 — 공식 수용인원 확인 필요' : (v.values.length ? '단일값(출처 확인 필요)' : 'capacity 없음'),
-    '사용 행 수': v.count,
-  }));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{ wch: 40 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 40 }, { wch: 24 }, { wch: 30 }, { wch: 9 }];
-  XLSX.utils.book_append_sheet(wb, ws, '공연장 마스터');
-  saveWb(wb, '공연장_마스터_초안.xlsx');
-};
-
-/* ---------- 탭 ---------- */
-function showTab(t) {
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  ['asm', 'chk', 'cnv'].forEach(k => $('pane-' + k).classList.toggle('hide', k !== t));
-}
-document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
-const esc2 = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const N = (v) => (typeof v === 'number' && v ? Math.round(v).toLocaleString() : '');
-function saveBuf(buf, name) {
-  const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-const ymd = () => { const d = new Date(); return String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0'); };
-
-/* ---------- ③ 원본 변환 ---------- */
-let legWb = null;
-bindDrop($('dropLeg'), $('fileLeg'), async (f) => {
-  try {
-    legWb = await readWb(f);
-    if (!legWb.Sheets['해외 공연 현황']) throw new Error("'해외 공연 현황' 시트가 없어요");
-    $('legName').textContent = f.name; $('cnvBtn').disabled = false; $('cnvStatus').textContent = '';
-  } catch (e) { $('legName').textContent = '읽기 실패: ' + e.message; }
-});
-$('cnvBtn').onclick = async () => {
-  try {
-    const src = KpopAssembler.convertLegacy(legWb);
-    const buf = await KpopAssembler.writeSource(src);
-    saveBuf(buf, `원본데이터_${ymd()}.xlsx`);
-    $('cnvStatus').textContent = `공연목록 ${src.main.length.toLocaleString()}행 · 솔로부록 ${src.appendix.length}행 · 공연장 ${src.master.length}곳으로 변환했어요.`;
-  } catch (e) { $('cnvStatus').textContent = '변환 실패: ' + e.message; }
-};
-
-/* ---------- ① 조립·순위 ---------- */
-let srcData = null, asmPlan = null, outBuf = null, updData = null, merged = null, updLog = [];
-$('aRef').value = today.toISOString().slice(0, 10);
-bindDrop($('dropSrc'), $('fileSrc'), async (f) => {
-  try {
-    const wb = await readWb(f);
-    if (!wb.Sheets['공연목록'] && wb.Sheets['해외 공연 현황']) throw new Error('결과 엑셀이에요. ③ 원본 변환 탭에서 먼저 변환하세요');
-    srcData = KpopAssembler.readSource(wb);
-    const st = srcData.settings || {};
-    if (st['자동순위연도']) $('aYears').value = st['자동순위연도'];
-    if (st['상위N']) $('aTop').value = st['상위N'];
-    $('srcName').textContent = `${f.name} · 공연 ${srcData.main.length.toLocaleString()}행 · 공식누적 ${srcData.official.length}건`;
-    $('asmBtn').disabled = false;
-  } catch (e) { $('srcName').textContent = '읽기 실패: ' + e.message; }
-});
-
-bindDrop($('dropUpd'), $('fileUpd'), async (f) => {
-  try {
-    updData = KpopAssembler.readUpdate(await readWb(f));
-    $('updName').textContent = `${f.name} · ${updData.rows.length}행 · 공식누적 ${updData.official.length}건`;
-  } catch (e) { updData = null; $('updName').textContent = '읽기 실패: ' + e.message; }
-});
-$('dlTpl').onclick = async (e) => { e.preventDefault(); saveBuf(await KpopAssembler.writeUpdate([], []), 'update_template.xlsx'); };
-
-$('asmBtn').onclick = async () => {
-  $('asmStatus').textContent = '만드는 중…';
-  try {
-    merged = srcData; updLog = [];
-    if (updData) { const r = KpopAssembler.applyUpdate(srcData, updData); merged = r.src; updLog = r.log; }
-    merged.settings = Object.assign({}, merged.settings, { 기준일: $('aRef').value, 자동순위연도: $('aYears').value || merged.settings['자동순위연도'], 상위N: Number($('aTop').value) || 15 });
-    asmPlan = KpopAssembler.plan(merged, { refDate: $('aRef').value, autoYears: $('aYears').value, topN: Number($('aTop').value) });
-    outBuf = await KpopAssembler.writeOutput(merged, asmPlan);
-    // 만든 결과를 바로 검증
-    mainWb = XLSX.read(outBuf, { type: 'array', cellFormula: true, sheetStubs: true, cellNF: true });
-    $('refDate').value = $('aRef').value; $('mainName').textContent = '조립 결과(방금 생성)'; $('runBtn').disabled = false;
-    const chk = runCheck();
-    renderAsm(chk);
-    $('asmStatus').textContent = '';
-  } catch (e) { console.error(e); $('asmStatus').textContent = '실패: ' + e.message; }
-};
-
-function renderAsm(chk) {
-  const p = asmPlan;
-  $('asmResult').classList.remove('hide');
-  const c = (s) => chk.issues.filter(i => i.sev === s && Number(i.year) >= (Number($('strictFrom').value) || 2025)).length;
-  const tagged = p.out.filter(r => r.__tag).length;
-  $('asmStats').innerHTML = [
-    ['결과 행', p.out.length + p.appendix.length, ''], ['[예정]·[일부 예정]', tagged, ''],
-    ['검증 오류(엄격 연도)', c('오류'), 'e'], ['확인필요(엄격 연도)', c('확인필요'), 'w'],
-  ].map(([t, n, k]) => `<div class="stat ${k}"><div>${t}</div><div class="n">${n.toLocaleString()}</div></div>`).join('');
-  let h = '';
-  p.autoYears.forEach(y => {
-    const list = p.listRank[y] || [];
-    const rk = p.rankings[y] || [];
-    const changed = rk.slice(0, p.topN).some((x, i) => list[i] !== x.artist);
-    h += `<h3 style="margin:18px 0 4px;font-size:16px">${y}년 ${changed ? '<span class="up">· 기존 목록과 순위가 달라요</span>' : '<span class="same">· 기존 목록과 같음</span>'}</h3>
-    <div class="tablewrap"><table><thead><tr><th class="num">순위</th><th>아티스트</th><th class="num">합계</th><th class="num">공식누적</th><th class="num">공식 관객수</th><th class="num">수용인원×일수</th><th class="num">행</th><th class="num">수치 없는 행</th><th>기존 목록</th></tr></thead><tbody>` +
-      rk.map(x => {
-        const was = list.indexOf(x.artist) + 1;
-        const mv = !was ? '<span class="up">신규</span>' : was === x.rank ? `<span class="same">${was}위</span>` : was > x.rank ? `<span class="up">${was}위 → ▲${was - x.rank}</span>` : `<span class="down">${was}위 → ▼${x.rank - was}</span>`;
-        const out = x.rank > p.topN ? ' style="opacity:.55"' : '';
-        return `<tr${out}><td class="num">${x.rank}</td><td>${esc2(x.artist)}${x.rank > p.topN ? ' <span class="muted">(상세 제외)</span>' : ''}</td><td class="num"><b>${N(x.total)}</b></td><td class="num" title="${esc2(x.usedOfficial.join(', '))}">${N(x.byOfficial)}</td><td class="num">${N(x.byAtt)}</td><td class="num">${N(x.byCap)}</td><td class="num">${x.rows}</td><td class="num">${x.blank || ''}</td><td>${mv}</td></tr>`;
-      }).join('') +
-      list.filter(a => !rk.some(x => x.artist === a)).map(a => `<tr><td></td><td>${esc2(a)}</td><td colspan="6" class="muted">원본에 ${y}년 행이 없음 → 결과 목록에서 빠져요</td><td><span class="down">목록에서 제외</span></td></tr>`).join('') +
-      `</tbody></table></div>`;
-  });
-  $('rankWrap').innerHTML = h || '<p class="note">자동 순위 연도가 없어요. 원본 순서 그대로 만들었어요.</p>';
-  $('dlNewSrc').classList.toggle('hide', !updData);
-  if (updData) {
-    const cls = { 추가: 'r-add', 수정: 'r-mod', 삭제: 'r-del', 오류: 'r-err', 건너뜀: 'r-err' };
-    const cnt = (k) => updLog.filter(l => l.결과 === k).length;
-    $('updWrap').innerHTML = `<h3 style="margin:18px 0 4px;font-size:16px">업데이트 반영 — 추가 ${cnt('추가')} · 수정 ${cnt('수정')} · 삭제 ${cnt('삭제')}${cnt('오류') + cnt('건너뜀') ? ` · <span class="up">확인 필요 ${cnt('오류') + cnt('건너뜀')}</span>` : ''}</h3>
-    <div class="tablewrap"><table><thead><tr><th>행</th><th>결과</th><th>연도</th><th>아티스트</th><th>대상</th><th>내용</th><th>근거</th></tr></thead><tbody>` +
-      updLog.map(l => `<tr><td>${esc2(l.행)}</td><td class="${cls[l.결과] || ''}">${esc2(l.결과)}</td><td>${esc2(l.year)}</td><td>${esc2(l.artist)}</td><td>${esc2(l.대상)}</td><td>${esc2(l.내용)}</td><td class="muted" style="max-width:280px;word-break:break-all">${esc2(l.근거)}</td></tr>`).join('') + `</tbody></table></div>`;
-  } else $('updWrap').innerHTML = '';
-  $('asmNotes').innerHTML = p.notes.length ? `<p class="note"><b>참고</b><br>${p.notes.map(n => esc2(`${n.year} ${n.artist} — ${n.kind}: ${n.detail}`)).join('<br>')}</p>` : '';
-  $('asmTitle').textContent = `순위 산정 결과 (기준일 ${$('aRef').value})`;
-}
-$('dlOut').onclick = () => outBuf && saveBuf(outBuf, `k-pop_자료조사_데이터_${ymd()}.xlsx`);
-$('toChk').onclick = () => showTab('chk');
-$('dlNewSrc').onclick = async () => saveBuf(await KpopAssembler.writeSource(merged), `원본데이터_${$('aRef').value.slice(2).replace(/-/g, '')}.xlsx`);
-$('dlBasis').onclick = () => {
-  const rows = [];
-  asmPlan.autoYears.forEach(y => (asmPlan.rankings[y] || []).forEach(x => rows.push({ 연도: y, 순위: x.rank, 아티스트: x.artist, 합계: x.total, 공식누적: x.byOfficial, '공식누적 내역': x.usedOfficial.join(', '), '공식 관객수': x.byAtt, '수용인원×일수': x.byCap, 행수: x.rows, '수치 없는 행': x.blank, 상세수록: x.rank <= asmPlan.topN ? 'O' : '제외', '기존 목록 순위': ((asmPlan.listRank[y] || []).indexOf(x.artist) + 1) || '' })));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = [{ wch: 6 }, { wch: 5 }, { wch: 16 }, { wch: 11 }, { wch: 11 }, { wch: 36 }, { wch: 11 }, { wch: 13 }, { wch: 6 }, { wch: 10 }, { wch: 8 }, { wch: 12 }];
-  XLSX.utils.book_append_sheet(wb, ws, '순위 산정 근거');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(merged.official.map(o => ({ 집계묶음: o['집계묶음'], 연도: o.year, 아티스트: o.artist, 공식관객수: o['공식관객수'], 출처: o['출처'], 설명: o['설명'] }))), '공식누적 출처');
-  saveWb(wb, `순위산정근거_${$('aRef').value}.xlsx`);
-};
-</script>
+  <footer class="foot">
+    <p>공식 기관 자료 기준이에요. attendance는 공식 출처가 있는 값만 넣고, 추정이거나 애매하면 공란으로 둡니다.</p>
+    <p>파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않아요.</p>
+  </footer>
 </body>
 </html>

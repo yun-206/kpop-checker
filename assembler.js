@@ -39,7 +39,18 @@
     }
     return rows;
   }
-  const aoa = (ws) => ({ origin: root.XLSX.utils.decode_range(ws['!ref']).s, rows: root.XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true }) });
+  // 표 영역만 읽기: 앞쪽의 빈 행·빈 열은 잘라내고 origin을 실제 시작 셀로 맞춤
+  // (시트의 사용 범위가 A1로 기록돼 있어도 B2부터 시작하는 표를 똑같이 읽도록)
+  const aoa = (ws) => {
+    const s = root.XLSX.utils.decode_range(ws['!ref']).s;
+    let rows = root.XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true, blankrows: true });
+    const filled = (v) => v !== null && v !== undefined && v !== '';
+    let r0 = rows.findIndex(r => r.some(filled)); if (r0 < 0) r0 = 0;
+    rows = rows.slice(r0);
+    const c0 = Math.min(...rows.map(r => { const i = r.findIndex(filled); return i < 0 ? Infinity : i; }));
+    const cut = isFinite(c0) ? c0 : 0;
+    return { origin: { r: s.r + r0, c: s.c + cut }, rows: rows.map(r => r.slice(cut)) };
+  };
 
   /* ---------- ① 기존 결과 엑셀 → 원본데이터 ---------- */
   function convertLegacy(wb) {
