@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>K-pop 해외공연 데이터 도구</title>
-  <meta name="description" content="K-pop 해외공연 데이터셋을 공식 수치로 조립하고 검증하는 도구. 파일은 브라우저 안에서만 처리됩니다.">
+  <meta name="description" content="K-pop 해외공연 데이터셋을 공식 수치로 조립하고 검증하는 도구. 파일은 브라우저 안에서만 처리해요.">
   <meta name="theme-color" content="#121212">
   <script>/* 저장된 테마를 그리기 전에 적용 (깜빡임 방지) */
     try { if (localStorage.getItem('tourdata-theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
@@ -54,7 +54,7 @@
     <!-- ================= 히어로 ================= -->
     <section class="hero" id="top" aria-labelledby="hero-title">
       <div class="hero__inner">
-        <p class="hero__lead">K팝 해외공연 데이터를<br>공식 수치로만 쌓고, 순위를 매기고, 검증합니다.</p>
+        <p class="hero__lead">K팝 해외공연 데이터를<br>공식 수치로만 쌓고, 순위를 매기고, 검증해요.</p>
       </div>
       <h1 class="hero__word" id="hero-title" aria-label="Tour Data">
         <span class="hero__word-line">Tour</span><span class="hero__word-line hero__word-line--2">Data</span>
@@ -75,8 +75,8 @@
     <!-- ================= 소개 문장 ================= -->
     <section class="statement" aria-label="도구 소개">
       <p class="statement__text" id="statement">
-        엑셀 자료를 올리면 공연 목록 정리, 순위 집계, 오류 점검까지 원하는 결과를 바로 받을 수 있습니다.
-        순위는 공식 관객수로만 계산하고, 오류는 행 단위로 짚어 줍니다.
+        엑셀 자료를 올리면 공연 목록 정리, 순위 집계, 오류 점검까지 원하는 결과를 바로 받을 수 있어요.
+        순위는 공식 관객수로만 계산하고, 오류는 행 단위로 짚어 줘요.
         아래로 내려가며 세 가지 기능을 살펴보세요.
       </p>
     </section>
@@ -88,11 +88,11 @@
         <div class="chapter__copy">
           <p class="chapter__no">기능 1</p>
           <h2 class="chapter__title" id="ch1-title">조립·순위</h2>
-          <p class="chapter__desc">원본 데이터 한 파일로 결과 엑셀을 만들고, 연도별 상위 15팀을 자동으로 산정합니다.</p>
+          <p class="chapter__desc">원본 데이터 한 파일로 결과 엑셀을 만들고, 연도별 상위 15팀을 자동으로 산정해요.</p>
           <ol class="steps">
-            <li class="is-active"><b>원본과 업데이트 파일 올리기</b><span>새 공연은 업데이트 파일에 추가·수정·삭제로 적어 두면 합쳐서 계산해요.</span></li>
-            <li><b>공식 수치로 순위 계산</b><span>공식 관객수가 있으면 그 값, 없으면 수용인원×일수로 더해요. 합계만 발표된 공연은 한 번만 더해요.</span></li>
-            <li><b>결과 엑셀 받기</b><span>두 시트, 연도별 목록, 변수 설명이 한 파일로 나오고, 예정 공연은 색으로 표시돼요.</span></li>
+            <li class="is-active"><button type="button" class="steps__btn"><b>원본과 업데이트 파일 올리기</b></button><span>새 공연은 업데이트 파일에 추가·수정·삭제로 적어 두면 합쳐서 계산해요.</span></li>
+            <li><button type="button" class="steps__btn"><b>공식 수치로 순위 계산</b></button><span>공식 관객수가 있으면 그 값, 없으면 수용인원×일수로 더해요. 합계만 발표된 공연은 한 번만 더해요.</span></li>
+            <li><button type="button" class="steps__btn"><b>결과 엑셀 받기</b></button><span>두 시트, 연도별 목록, 변수 설명이 한 파일로 나오고, 예정 공연은 색으로 표시돼요.</span></li>
           </ol>
           <div class="chapter__actions">
             <a class="cta" href="#sec-asm" data-go="asm"><span>조립·순위 바로 쓰기</span><span class="cta__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
@@ -142,11 +142,11 @@
         <div class="chapter__copy">
           <p class="chapter__no">기능 2</p>
           <h2 class="chapter__title" id="ch2-title">검증</h2>
-          <p class="chapter__desc">21개 규칙으로 모든 행을 훑어 오류 후보를 찾고, 어디를 고쳐야 하는지 알려 줍니다.</p>
+          <p class="chapter__desc">21개 규칙으로 모든 행을 훑어 오류 후보를 찾고, 어디를 고쳐야 하는지 알려 줘요.</p>
           <ol class="steps">
-            <li class="is-active"><b>데이터셋 올리기</b><span>결과 엑셀을 올리면 두 시트를 행마다 대조해요. 조립 직후에는 자동으로 실행돼요.</span></li>
-            <li><b>등급별로 확인</b><span>오류, 확인필요, 참고 세 등급으로 나눠 보여 주고 항목별로 걸러 볼 수 있어요.</span></li>
-            <li><b>리포트로 내보내기</b><span>오류 리포트와 공연장 마스터 초안을 엑셀로 받아 출처를 확인해요.</span></li>
+            <li class="is-active"><button type="button" class="steps__btn"><b>데이터셋 올리기</b></button><span>결과 엑셀을 올리면 두 시트를 행마다 대조해요. 조립 직후에는 자동으로 실행돼요.</span></li>
+            <li><button type="button" class="steps__btn"><b>등급별로 확인</b></button><span>오류, 확인필요, 참고 세 등급으로 나눠 보여 주고 항목별로 걸러 볼 수 있어요.</span></li>
+            <li><button type="button" class="steps__btn"><b>리포트로 내보내기</b></button><span>오류 리포트와 공연장 마스터 초안을 엑셀로 받아 출처를 확인해요.</span></li>
           </ol>
           <div class="chapter__actions">
             <a class="cta" href="#sec-chk" data-go="chk"><span>검증 바로 쓰기</span><span class="cta__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
@@ -193,11 +193,11 @@
         <div class="chapter__copy">
           <p class="chapter__no">기능 3</p>
           <h2 class="chapter__title" id="ch3-title">원본 변환</h2>
-          <p class="chapter__desc">지금까지 쓰던 결과 엑셀을 원본 데이터로 바꿔, 다음부터는 원본만 고치면 되게 합니다.</p>
+          <p class="chapter__desc">지금까지 쓰던 결과 엑셀을 원본 데이터로 바꿔, 다음부터는 원본만 고치면 되게 해요.</p>
           <ol class="steps">
-            <li class="is-active"><b>기존 엑셀 올리기</b><span>'해외 공연 현황' 시트가 있는 파일이면 돼요. 처음 한 번만 하면 됩니다.</span></li>
-            <li><b>표시는 열로 정리</b><span>[예정] 태그는 떼고, "(소속사 제공)" 같은 표시는 별도 열로 옮겨요.</span></li>
-            <li><b>원본 데이터 받기</b><span>공연목록, 공연장마스터, 공식누적, 설정 시트로 나뉜 파일을 받아요.</span></li>
+            <li class="is-active"><button type="button" class="steps__btn"><b>기존 엑셀 올리기</b></button><span>'해외 공연 현황' 시트가 있는 파일이면 되고, 처음 한 번만 하면 돼요.</span></li>
+            <li><button type="button" class="steps__btn"><b>표시는 열로 정리</b></button><span>[예정] 태그는 떼고, "(소속사 제공)" 같은 표시는 별도 열로 옮겨요.</span></li>
+            <li><button type="button" class="steps__btn"><b>원본 데이터 받기</b></button><span>공연목록, 공연장마스터, 공식누적, 설정 시트로 나뉜 파일을 받아요.</span></li>
           </ol>
           <div class="chapter__actions">
             <a class="cta" href="#sec-cnv" data-go="cnv"><span>원본 변환 바로 쓰기</span><span class="cta__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
@@ -247,7 +247,7 @@
     <section class="tool" id="sec-asm" data-tab="asm" aria-labelledby="t1">
       <header class="tool__head">
         <span class="tool__no">1</span>
-        <div><h2 id="t1" tabindex="-1">조립·순위</h2><p>원본 데이터를 올리면 결과 엑셀과 순위가 나옵니다.</p></div>
+        <div><h2 id="t1" tabindex="-1">조립·순위</h2><p>원본 데이터를 올리면 결과 엑셀과 순위가 나와요.</p></div>
       </header>
       <div id="pane-asm">
         <div class="panel">
@@ -305,7 +305,7 @@
     <section class="tool" id="sec-chk" data-tab="chk" aria-labelledby="t2">
       <header class="tool__head">
         <span class="tool__no">2</span>
-        <div><h2 id="t2" tabindex="-1">검증</h2><p>오류 후보를 보여줄 뿐, 최종 판단은 출처를 확인한 사람이 합니다.</p></div>
+        <div><h2 id="t2" tabindex="-1">검증</h2><p>오류 후보를 보여줄 뿐, 최종 판단은 출처를 확인한 사람이 해요.</p></div>
       </header>
       <div id="pane-chk">
         <div class="panel">
@@ -358,7 +358,7 @@
         <details class="rules">
           <summary>검사하는 규칙 21개 보기</summary>
           <ul class="rules__list">
-            <li>국내 공연 포함</li><li>관객수가 수용인원보다 큼</li><li>capacity에 여러 날 합계 의심</li>
+            <li>국내 공연 포함</li><li>수용인원보다 많은 관객수</li><li>capacity에 여러 날 합계 의심</li>
             <li>관객수 = 수용인원 × 일수 (복사 의심)</li><li>같은 공연장 capacity 불일치</li><li>공연장 마스터와 대조</li>
             <li>그룹 블록 끊김</li><li>연도별 목록 순위와 블록 순서</li><li>블록 안 날짜순</li>
             <li>목록 밖(16위 이하) 상세 행</li><li>두 시트 값·변수 불일치</li><li>수식이 다른 행 참조</li>
@@ -373,7 +373,7 @@
     <section class="tool" id="sec-cnv" data-tab="cnv" aria-labelledby="t3">
       <header class="tool__head">
         <span class="tool__no">3</span>
-        <div><h2 id="t3" tabindex="-1">원본 변환</h2><p>처음 한 번만 하면 돼요. 이후로는 원본 데이터로 조립합니다.</p></div>
+        <div><h2 id="t3" tabindex="-1">원본 변환</h2><p>처음 한 번만 하면 돼요. 이후로는 원본 데이터로 조립해요.</p></div>
       </header>
       <div id="pane-cnv">
         <div class="panel">
@@ -405,7 +405,7 @@
     <!-- ================= 마무리 ================= -->
     <section class="closing" aria-labelledby="closing-title">
       <h2 id="closing-title">공식 수치만,<br>출처와 함께.</h2>
-      <p>attendance는 공식 출처가 있는 값만 넣고, 추정이거나 애매하면 공란으로 둡니다.</p>
+      <p>attendance는 공식 출처가 있는 값만 넣고, 추정이거나 애매하면 공란으로 둬요.</p>
       <a class="btn btn--accent btn--lg" href="#sec-asm">결과 엑셀 만들러 가기</a>
     </section>
   </main>

@@ -148,7 +148,7 @@
         const m = venueMaster.get(norm(loc) + '|' + norm(city));
         if (m && isNum(m.capacity)) {
           if (isNum(cap) && cap !== m.capacity) add(SEV.WARN, '공연장 마스터와 불일치', MAIN, row, `capacity ${cap.toLocaleString()} ≠ 마스터 ${m.capacity.toLocaleString()} (${m.source || '출처 미기재'})`, { suggest: m.capacity });
-          if (!isNum(cap)) add(SEV.INFO, '마스터로 채울 수 있음', MAIN, row, `capacity가 비어 있어요 — 마스터 값 ${m.capacity.toLocaleString()} (${m.source || '출처 미기재'})`, { suggest: m.capacity });
+          if (!isNum(cap)) add(SEV.INFO, '마스터로 채울 수 있는 칸', MAIN, row, `capacity가 비어 있어요 — 마스터 값 ${m.capacity.toLocaleString()} (${m.source || '출처 미기재'})`, { suggest: m.capacity });
         }
       }
     });

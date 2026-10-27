@@ -202,15 +202,21 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
 .chapter__title { margin-top: 10px; font-size: clamp(40px, 5vw, 68px); line-height: 1.05; font-weight: 700; letter-spacing: -.035em; }
 .chapter__desc { margin-top: 16px; font-size: 17px; line-height: 1.55; color: var(--muted); }
 .steps { margin: 28px 0 28px; display: grid; gap: 4px; counter-reset: s; }
-.steps li { position: relative; padding: 14px 0 14px 44px; border-top: 1px solid var(--line); color: var(--faint); transition: color .2s var(--ease); counter-increment: s; }
-.steps li::before { content: "1"; position: absolute; left: 0; top: 13px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-size: 13px; font-weight: 600; box-shadow: inset 0 0 0 1px var(--line-2); transition: background-color .2s, color .2s, box-shadow .2s; }
-.steps li:nth-child(2)::before { content: "2"; }
-.steps li:nth-child(3)::before { content: "3"; }
+.steps li { position: relative; border-top: 1px solid var(--line); color: var(--faint); transition: color .2s var(--ease); }
+/* 번호 + 제목 줄 전체가 버튼: 누르면 그 단계로 이동 */
+.steps__btn { position: relative; display: block; width: 100%; padding: 14px 0 14px 44px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.steps__btn::before { content: "1"; position: absolute; left: 0; top: 13px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-size: 13px; font-weight: 600; box-shadow: inset 0 0 0 1px var(--line-2); transition: background-color .2s, color .2s, box-shadow .2s, transform .2s var(--ease); }
+.steps li:nth-child(2) .steps__btn::before { content: "2"; }
+.steps li:nth-child(3) .steps__btn::before { content: "3"; }
+.steps__btn:hover { color: var(--ink); }
+.steps__btn:hover::before { box-shadow: inset 0 0 0 1.5px var(--accent-hi); color: var(--accent-hi); transform: scale(1.08); }
+.steps__btn:active::before { transform: scale(.94); }
 .steps b { display: block; font-size: 17px; font-weight: 600; }
-.steps span { display: block; overflow: hidden; max-height: 0; opacity: 0; font-size: 14px; line-height: 1.55; color: var(--muted); transition: max-height .3s var(--ease), opacity .25s, margin .3s; }
+.steps span { display: block; overflow: hidden; max-height: 0; opacity: 0; margin-left: 44px; font-size: 14px; line-height: 1.55; color: var(--muted); transition: max-height .3s var(--ease), opacity .25s, margin .3s; }
 .steps li.is-active { color: var(--ink); }
-.steps li.is-active::before { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
-.steps li.is-active span { max-height: 96px; opacity: 1; margin-top: 6px; }
+.steps li.is-active .steps__btn { cursor: default; }
+.steps li.is-active .steps__btn::before, .steps li.is-active .steps__btn:hover::before { background: var(--accent); color: var(--accent-ink); box-shadow: none; transform: none; }
+.steps li.is-active span { max-height: 96px; opacity: 1; margin-top: -6px; margin-bottom: 14px; }
 
 /* 데모 창 */
 .stage { position: relative; display: grid; place-items: center; }
@@ -302,7 +308,9 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
   .chapter__title { font-size: 36px; margin-top: 4px; }
   .chapter__desc { font-size: 15px; margin-top: 8px; }
   .steps { margin: 14px 0 0; }
-  .steps li:not(.is-active) { display: none; }
+  .steps li:not(.is-active) .steps__btn { padding-top: 8px; padding-bottom: 8px; }
+  .steps li:not(.is-active) .steps__btn::before { top: 6px; width: 26px; height: 26px; }
+  .steps li:not(.is-active) b { font-size: 15px; }
   .chapter__actions { display: none; }
   .win { aspect-ratio: 4 / 3.4; max-width: 520px; }
   .frame { padding: 18px; gap: 12px; }
@@ -447,7 +455,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .chapter { height: auto; }
   .chapter__sticky { position: relative; height: auto; padding-top: 96px; }
-  .steps span { max-height: none; opacity: 1; margin-top: 6px; }
+  .steps span { max-height: none; opacity: 1; margin-top: -6px; margin-bottom: 14px; }
   .steps li, .steps li:not(.is-active) { display: block; color: var(--ink); }
   .frame { position: relative; inset: auto; opacity: 1; transform: none; }
   .frame:not(:first-child) { display: none; }
@@ -461,7 +469,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .bar__brand { grid-column: 1; grid-row: 1; }
   .bar__end { grid-column: 2; grid-row: 1; gap: 8px; }
   .seg { grid-row: 2; }
-  .chapter__sticky { padding-top: 124px; }
+  .chapter__sticky { padding-top: 124px; padding-bottom: 92px; gap: 12px; align-content: stretch; }   /* 아래 바로가기 바 자리 비움 */
+  .stage { min-height: 0; height: 100%; align-self: stretch; align-items: stretch; }
+  .win { aspect-ratio: auto; height: 100%; max-height: 420px; }
 }
 
 @media (max-width: 900px) {

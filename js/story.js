@@ -48,7 +48,11 @@
   function setStep(ch, i) {
     if (ch.current === i) return;
     ch.current = i;
-    ch.steps.forEach((s, k) => s.classList.toggle('is-active', k === i));
+    ch.steps.forEach((s, k) => {
+      s.classList.toggle('is-active', k === i);
+      const btn = s.querySelector('.steps__btn');
+      if (btn) { if (k === i) btn.setAttribute('aria-current', 'step'); else btn.removeAttribute('aria-current'); }
+    });
     ch.frames.forEach((f, k) => f.classList.toggle('is-active', k === i));
   }
 
@@ -95,6 +99,18 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', () => { placeThumb(); onScroll(); });
   if (document.fonts) document.fonts.ready.then(placeThumb);
+
+  /* ---------- 단계 번호 클릭: 그 단계에 해당하는 스크롤 위치로 이동 ---------- */
+  chapters.forEach((ch) => ch.steps.forEach((s, k) => {
+    const btn = s.querySelector('.steps__btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const range = ch.el.offsetHeight - window.innerHeight;
+      if (range <= 0) { setStep(ch, k); return; }   // 동작 줄이기 모드: 스크롤 구간이 없으니 바로 전환
+      const top = ch.el.getBoundingClientRect().top + window.scrollY + range * (k + 0.5) / ch.steps.length;
+      window.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
+    });
+  }));
 
   /* ---------- 기능으로 이동 + 도착 표시 ---------- */
   function go(hash) {
