@@ -105,3 +105,27 @@
 
   frame();
 })();
+
+/* 다크 / 라이트 전환 스위치 */
+(() => {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  const root = document.documentElement;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sync = () => {
+    const light = root.getAttribute('data-theme') === 'light';
+    btn.setAttribute('aria-checked', String(light));
+    btn.setAttribute('aria-label', light ? '다크 모드로 바꾸기' : '라이트 모드로 바꾸기');
+    if (meta) meta.setAttribute('content', light ? '#f5f6f8' : '#121212');
+  };
+  let t;
+  btn.addEventListener('click', () => {
+    const light = root.getAttribute('data-theme') !== 'light';
+    if (!reduce) { root.classList.add('theme-anim'); clearTimeout(t); t = setTimeout(() => root.classList.remove('theme-anim'), 450); }
+    if (light) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
+    try { localStorage.setItem('tourdata-theme', light ? 'light' : 'dark'); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
