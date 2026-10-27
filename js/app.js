@@ -111,38 +111,16 @@ $('dlVenue').onclick = () => {
   saveWb(wb, '공연장_마스터_초안.xlsx');
 };
 
-/* ---------- 탭 ---------- */
-function showTab(t, focus) {
-  document.querySelectorAll('.tab').forEach(b => {
-    const on = b.dataset.tab === t;
-    b.classList.toggle('on', on);
-    b.setAttribute('aria-selected', String(on));
-    b.tabIndex = on ? 0 : -1;
-    if (on && focus) b.focus();
-  });
-  ['asm', 'chk', 'cnv'].forEach(k => $('pane-' + k).classList.toggle('hide', k !== t));
-  moveThumb();
-  window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+/* ---------- 기능 이동 (한 페이지 스크롤) ---------- */
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function showTab(t) {
+  const el = document.getElementById('sec-' + t);
+  if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
 }
-function moveThumb() {
-  const on = document.querySelector('.tab.on'), th = $('segThumb');
-  if (!on || !th) return;
-  th.style.width = on.offsetWidth + 'px';
-  th.style.transform = `translateX(${on.offsetLeft}px)`;
-}
-window.addEventListener('resize', moveThumb);
-document.fonts && document.fonts.ready.then(moveThumb);
-moveThumb();
-const tabs = [...document.querySelectorAll('.tab')];
-tabs.forEach((b, i) => b.addEventListener('keydown', (e) => {
-  const k = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
-  if (k) { e.preventDefault(); showTab(tabs[(i + k + tabs.length) % tabs.length].dataset.tab, true); }
-}));
-// 상단 바: 스크롤하면 구분선
+// 상단 바: 스크롤하면 배경
 const bar = $('bar');
-const onBar = () => bar.classList.toggle('is-scrolled', window.scrollY > 4);
+const onBar = () => bar.classList.toggle('is-scrolled', window.scrollY > 8);
 window.addEventListener('scroll', onBar, { passive: true }); onBar();
-document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 const esc2 = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const N = (v) => (typeof v === 'number' && v ? Math.round(v).toLocaleString() : '');
 function saveBuf(buf, name) {
@@ -166,7 +144,7 @@ $('cnvBtn').onclick = async () => {
     const src = KpopAssembler.convertLegacy(legWb);
     const buf = await KpopAssembler.writeSource(src);
     saveBuf(buf, `원본데이터_${ymd()}.xlsx`);
-    $('cnvStatus').textContent = `공연목록 ${src.main.length.toLocaleString()}행 · 솔로부록 ${src.appendix.length}행 · 공연장 ${src.master.length}곳으로 변환했어요.`;
+    $('cnvStatus').textContent = `공연목록 ${src.main.length.toLocaleString()}행, 솔로부록 ${src.appendix.length}행, 공연장 ${src.master.length}곳으로 변환했어요.`;
   } catch (e) { $('cnvStatus').textContent = '변환 실패: ' + e.message; }
 };
 
@@ -208,7 +186,7 @@ $('asmBtn').onclick = async () => {
     const chk = runCheck();
     renderAsm(chk);
     $('asmStatus').textContent = '';
-    $('asmResult').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    $('asmResult').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   } catch (e) { console.error(e); $('asmStatus').textContent = '실패: ' + e.message; }
 };
 
@@ -250,7 +228,7 @@ function renderAsm(chk) {
   $('asmTitle').textContent = `순위 산정 결과 (기준일 ${$('aRef').value})`;
 }
 $('dlOut').onclick = () => outBuf && saveBuf(outBuf, `k-pop_자료조사_데이터_${ymd()}.xlsx`);
-$('toChk').onclick = () => { showTab('chk'); setTimeout(() => $('resultCard').scrollIntoView({ block: 'start' }), 50); };
+$('toChk').onclick = () => $('resultCard').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
 $('dlNewSrc').onclick = async () => saveBuf(await KpopAssembler.writeSource(merged), `원본데이터_${$('aRef').value.slice(2).replace(/-/g, '')}.xlsx`);
 $('dlBasis').onclick = () => {
   const rows = [];

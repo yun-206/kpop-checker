@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>K-pop 해외공연 데이터 도구</title>
-  <meta name="description" content="K-pop 해외공연 데이터셋 엑셀을 브라우저 안에서 조립·검증합니다. 파일은 외부로 전송되지 않습니다.">
-  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230071e3'/%3E%3Cpath d='M9 22V10m7 12V14m7 8v-5' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <meta name="description" content="K-pop 해외공연 데이터셋을 공식 수치로 조립하고 검증하는 도구. 파일은 브라우저 안에서만 처리됩니다.">
+  <meta name="theme-color" content="#121212">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2301539f'/%3E%3Cpath d='M9 22V10m7 12V14m7 8v-5' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="css/app.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -16,236 +17,384 @@
   <script src="checker.js" defer></script>
   <script src="assembler.js" defer></script>
   <script src="js/app.js" defer></script>
+  <script src="js/story.js" defer></script>
 </head>
 <body>
-  <a class="skip" href="#main">본문으로 건너뛰기</a>
+  <a class="skip" href="#sec-asm">도구로 바로 가기</a>
 
-  <!-- 상단 바 -->
+  <!-- ================= 상단 바 ================= -->
   <header class="bar" id="bar">
     <div class="bar__inner">
-      <a class="bar__brand" href="#top" aria-label="K-pop 해외공연 데이터 도구, 처음으로">
-        <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M9 22V10m7 12V14m7 8v-5" stroke="var(--brand-ink)" stroke-width="3" stroke-linecap="round"/></svg>
-        <span>공연 데이터 도구</span>
+      <a class="bar__brand" href="#top" aria-label="처음으로">
+        <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M9 22V10m7 12V14m7 8v-5" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>Tour Data</span>
       </a>
-      <nav class="seg" role="tablist" aria-label="작업 선택">
+      <nav class="seg" aria-label="기능으로 이동">
         <span class="seg__thumb" id="segThumb" aria-hidden="true"></span>
-        <button class="tab on" role="tab" id="tab-asm" data-tab="asm" aria-selected="true" aria-controls="pane-asm">조립·순위</button>
-        <button class="tab" role="tab" id="tab-chk" data-tab="chk" aria-selected="false" aria-controls="pane-chk" tabindex="-1">검증</button>
-        <button class="tab" role="tab" id="tab-cnv" data-tab="cnv" aria-selected="false" aria-controls="pane-cnv" tabindex="-1">원본 변환</button>
+        <a class="tab" href="#sec-asm" data-tab="asm">조립·순위</a>
+        <a class="tab" href="#sec-chk" data-tab="chk">검증</a>
+        <a class="tab" href="#sec-cnv" data-tab="cnv">원본 변환</a>
       </nav>
-      <p class="bar__privacy" title="파일은 이 브라우저 안에서만 처리돼요">
-        <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5 3 3.5v4c0 3.2 2.1 5.8 5 7 2.9-1.2 5-3.8 5-7v-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-        <span>브라우저 안에서만 처리</span>
-      </p>
+      <a class="btn btn--accent btn--sm bar__cta" href="#sec-asm">바로 사용하기</a>
     </div>
   </header>
 
   <main id="main">
 
-    <!-- ================= ① 조립·순위 ================= -->
-    <section class="pane" id="pane-asm" role="tabpanel" aria-labelledby="tab-asm">
-      <header class="hero" id="top">
-        <h1>원본 데이터를 올리면<br>결과 엑셀과 순위가 나옵니다.</h1>
-        <p>박사님 양식 그대로 만들고, 만들자마자 21개 규칙으로 검증까지 끝냅니다.</p>
-      </header>
-
-      <ol class="flow" aria-label="사용 순서">
-        <li><span class="flow__no">1</span><div><h2>파일 올리기</h2><p>원본 데이터를 올려요. 새 공연이 있으면 업데이트 파일도 함께 올리면 합쳐서 계산해요.</p></div></li>
-        <li><span class="flow__no">2</span><div><h2>순위 산정</h2><p>공식 관객수, 없으면 수용인원×일수로 합산해요. 공식누적 묶음은 공식 합계를 한 번만 더해요.</p></div></li>
-        <li><span class="flow__no">3</span><div><h2>받기와 검증</h2><p>결과 엑셀을 받고, 검증 결과를 바로 확인해요.</p></div></li>
-      </ol>
-
-      <div class="panel">
-        <div class="panel__grid">
-          <div class="field">
-            <span class="field__label" id="lbl-src">원본 데이터</span>
-            <div class="drop" id="dropSrc" role="button" tabindex="0" aria-labelledby="lbl-src srcName">
-              <span class="drop__icon" aria-hidden="true"></span>
-              <b>끌어다 놓거나 눌러서 선택</b>
-              <small id="srcName">'공연목록' 시트가 있는 .xlsx</small>
-            </div>
-            <input type="file" id="fileSrc" accept=".xlsx" class="hide">
-          </div>
-          <div class="field">
-            <span class="field__label" id="lbl-upd">업데이트 파일 <em>선택</em></span>
-            <div class="drop" id="dropUpd" role="button" tabindex="0" aria-labelledby="lbl-upd updName">
-              <span class="drop__icon" aria-hidden="true"></span>
-              <b>추가·수정·삭제할 행</b>
-              <small id="updName">'업데이트' 시트가 있는 .xlsx</small>
-            </div>
-            <input type="file" id="fileUpd" accept=".xlsx" class="hide">
-            <a href="#" class="link link--sm" id="dlTpl">빈 업데이트 양식 받기</a>
-          </div>
-        </div>
-
-        <div class="settings">
-          <label class="field">
-            <span class="field__label">기준일</span>
-            <input type="date" id="aRef">
-            <span class="field__hint">이 날짜 이후 공연은 [예정]으로 표시돼요.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">자동 순위 연도</span>
-            <input type="search" id="aYears" placeholder="2026" inputmode="numeric">
-            <span class="field__hint">여러 해는 쉼표로 구분해요.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">상세 수록 팀 수</span>
-            <input type="number" id="aTop" value="15" min="1" max="50">
-            <span class="field__hint">이보다 아래 순위는 비고에 요약돼요.</span>
-          </label>
-        </div>
-
-        <div class="panel__foot">
-          <p class="status" id="asmStatus" role="status" aria-live="polite"></p>
-          <button class="btn btn--primary btn--lg" id="asmBtn" disabled>결과 엑셀 만들기</button>
-        </div>
+    <!-- ================= 히어로 ================= -->
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero__inner">
+        <p class="hero__kicker"><span class="dot" aria-hidden="true"></span>문화관광 정책 연구용 데이터 도구</p>
+        <p class="hero__lead">K팝 해외공연 데이터를<br>공식 수치로만 쌓고, 순위를 매기고, 검증합니다.</p>
       </div>
-
-      <div class="panel panel--result hide" id="asmResult">
-        <div class="result-head">
-          <h2 id="asmTitle">순위 산정 결과</h2>
-          <div class="actions">
-            <button class="btn btn--primary" id="dlOut">결과 엑셀 받기</button>
-            <button class="btn btn--ghost hide" id="dlNewSrc">새 원본 받기</button>
-            <button class="btn btn--ghost" id="dlBasis">산정 근거 받기</button>
-            <button class="btn btn--plain" id="toChk">검증 결과 보기 <span aria-hidden="true">›</span></button>
-          </div>
+      <h1 class="hero__word" id="hero-title" aria-label="Tour Data">
+        <span class="hero__word-line">Tour</span><span class="hero__word-line hero__word-line--2">Data</span>
+      </h1>
+      <dl class="hero__facts">
+        <div><dt>2,600+</dt><dd>2010년부터 쌓은 해외 공연 행</dd></div>
+        <div><dt>21</dt><dd>자동으로 확인하는 데이터 규칙</dd></div>
+        <div><dt>0</dt><dd>서버로 보내는 파일. 모두 브라우저 안에서 처리</dd></div>
+      </dl>
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee__track">
+          <span>BTS</span><span>BIGBANG</span><span>TWICE</span><span>Stray Kids</span><span>LE SSERAFIM</span><span>TREASURE</span><span>ENHYPEN</span><span>aespa</span><span>IVE</span><span>BABYMONSTER</span><span>SEVENTEEN</span><span>TXT</span><span>KATSEYE</span><span>XG</span><span>EXO</span>
+          <span>BTS</span><span>BIGBANG</span><span>TWICE</span><span>Stray Kids</span><span>LE SSERAFIM</span><span>TREASURE</span><span>ENHYPEN</span><span>aespa</span><span>IVE</span><span>BABYMONSTER</span><span>SEVENTEEN</span><span>TXT</span><span>KATSEYE</span><span>XG</span><span>EXO</span>
         </div>
-        <div class="stats" id="asmStats"></div>
-        <div id="updWrap"></div>
-        <div id="rankWrap"></div>
-        <div id="asmNotes"></div>
       </div>
     </section>
 
-    <!-- ================= ② 검증 ================= -->
-    <section class="pane hide" id="pane-chk" role="tabpanel" aria-labelledby="tab-chk">
-      <header class="hero">
-        <h1>규칙 위반을<br>행 단위로 찾아냅니다.</h1>
-        <p>오류 후보를 보여줄 뿐, 최종 판단은 출처를 확인한 사람이 합니다.</p>
-      </header>
-
-      <div class="panel">
-        <div class="panel__grid">
-          <div class="field">
-            <span class="field__label" id="lbl-main">데이터셋 엑셀</span>
-            <div class="drop" id="dropMain" role="button" tabindex="0" aria-labelledby="lbl-main mainName">
-              <span class="drop__icon" aria-hidden="true"></span>
-              <b>끌어다 놓거나 눌러서 선택</b>
-              <small id="mainName">'해외 공연 현황' 시트가 있는 .xlsx</small>
-            </div>
-            <input type="file" id="fileMain" accept=".xlsx,.xlsm" class="hide">
-          </div>
-          <div class="field">
-            <span class="field__label" id="lbl-venue">공연장 마스터 <em>선택</em></span>
-            <div class="drop" id="dropVenue" role="button" tabindex="0" aria-labelledby="lbl-venue venueName">
-              <span class="drop__icon" aria-hidden="true"></span>
-              <b>공연장 마스터 .xlsx</b>
-              <small id="venueName">location, city, capacity, source 열</small>
-            </div>
-            <input type="file" id="fileVenue" accept=".xlsx,.csv" class="hide">
-          </div>
-        </div>
-
-        <div class="settings settings--two">
-          <label class="field">
-            <span class="field__label">기준일</span>
-            <input type="date" id="refDate">
-            <span class="field__hint">[예정] 표시가 맞는지 이 날짜로 판단해요.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">엄격 검사 시작 연도</span>
-            <input type="number" id="strictFrom" value="2025" min="2010" max="2100">
-            <span class="field__hint">이 연도부터는 규칙을 모두 적용해요.</span>
-          </label>
-        </div>
-
-        <div class="panel__foot">
-          <p class="status" id="status" role="status" aria-live="polite"></p>
-          <button class="btn btn--primary btn--lg" id="runBtn" disabled>검사 실행</button>
-        </div>
-      </div>
-
-      <div class="panel panel--result hide" id="resultCard">
-        <div class="stats" id="stats"></div>
-
-        <div class="filters">
-          <label class="field">
-            <span class="field__label">연도 범위</span>
-            <span class="range"><input type="number" id="yearFrom" aria-label="시작 연도"><span aria-hidden="true">–</span><input type="number" id="yearTo" aria-label="끝 연도"></span>
-          </label>
-          <label class="field field--grow">
-            <span class="field__label">검색</span>
-            <input type="search" id="q" placeholder="아티스트나 내용, 예: Kai Tak, BTS">
-          </label>
-          <div class="field">
-            <span class="field__label">내보내기</span>
-            <span class="actions"><button class="btn btn--ghost" id="dlXlsx">오류 리포트</button><button class="btn btn--ghost" id="dlVenue">공연장 마스터 초안</button></span>
-          </div>
-        </div>
-
-        <div class="chips" id="sevChips" aria-label="등급 필터"></div>
-        <div class="chips chips--checks" id="checkChips" aria-label="검사 항목 필터"></div>
-
-        <div class="tablewrap tablewrap--tall"><table>
-          <thead><tr><th>등급</th><th>검사 항목</th><th>시트</th><th class="num">엑셀 행</th><th class="num">no</th><th class="num">연도</th><th>아티스트</th><th>내용</th></tr></thead>
-          <tbody id="tbody"></tbody>
-        </table></div>
-        <p class="note" id="shown"></p>
-      </div>
-
-      <details class="panel panel--quiet rules">
-        <summary>검사하는 규칙 보기</summary>
-        <ul class="rules__list">
-          <li>국내 공연 포함</li><li>관객수가 수용인원보다 큼</li><li>capacity에 여러 날 합계 의심</li>
-          <li>관객수 = 수용인원 × 일수 (복사 의심)</li><li>같은 공연장 capacity 불일치</li><li>공연장 마스터와 대조</li>
-          <li>그룹 블록 끊김</li><li>연도별 목록 순위와 블록 순서</li><li>블록 안 날짜순</li>
-          <li>목록 밖(16위 이하) 상세 행</li><li>두 시트 값·변수 불일치</li><li>수식이 다른 행 참조</li>
-          <li>no 연번</li><li>분기(qt)</li><li>날짜와 일수 모순</li>
-          <li>중복 행</li><li>[예정]·[일부 예정] 표시 누락</li><li>끝난 [예정] 공연</li>
-        </ul>
-      </details>
+    <!-- ================= 소개 문장 ================= -->
+    <section class="statement" aria-label="도구 소개">
+      <p class="statement__text" id="statement">
+        엑셀을 올리면 박사님 양식 그대로 결과가 나옵니다.
+        순위는 공식 관객수로 계산하고, 오류는 행 단위로 짚어 줍니다.
+        아래로 내려가며 세 가지 기능을 차례로 살펴보세요.
+      </p>
     </section>
 
-    <!-- ================= ③ 원본 변환 ================= -->
-    <section class="pane hide" id="pane-cnv" role="tabpanel" aria-labelledby="tab-cnv">
-      <header class="hero">
-        <h1>쓰던 결과 엑셀을<br>원본 데이터로 바꿉니다.</h1>
-        <p>처음 한 번만 하면 돼요. 이후로는 원본 데이터로 조립합니다.</p>
-      </header>
-
-      <div class="panel panel--narrow">
-        <div class="field">
-          <span class="field__label" id="lbl-leg">기존 결과 엑셀</span>
-          <div class="drop" id="dropLeg" role="button" tabindex="0" aria-labelledby="lbl-leg legName">
-            <span class="drop__icon" aria-hidden="true"></span>
-            <b>끌어다 놓거나 눌러서 선택</b>
-            <small id="legName">'해외 공연 현황' 시트가 있는 .xlsx</small>
+    <!-- ================= 기능 소개: 스크롤 스토리텔링 ================= -->
+    <!-- 챕터 1: 조립·순위 -->
+    <section class="chapter" id="intro-asm" data-tab="asm" aria-labelledby="ch1-title">
+      <div class="chapter__sticky">
+        <div class="chapter__copy">
+          <p class="chapter__no">기능 1</p>
+          <h2 class="chapter__title" id="ch1-title">조립·순위</h2>
+          <p class="chapter__desc">원본 데이터 한 파일로 결과 엑셀을 만들고, 연도별 상위 15팀을 자동으로 산정합니다.</p>
+          <ol class="steps">
+            <li class="is-active"><b>원본과 업데이트 파일 올리기</b><span>새 공연은 업데이트 파일에 추가·수정·삭제로 적어 두면 합쳐서 계산해요.</span></li>
+            <li><b>공식 수치로 순위 계산</b><span>공식 관객수가 있으면 그 값, 없으면 수용인원×일수로 더해요. 합계만 발표된 공연은 한 번만 더해요.</span></li>
+            <li><b>결과 엑셀 받기</b><span>두 시트·연도별 목록·변수 설명까지 박사님 양식 그대로 나오고, 예정 공연은 색으로 표시돼요.</span></li>
+          </ol>
+          <a class="link" href="#sec-asm">조립·순위 바로 쓰기 <span aria-hidden="true">›</span></a>
+        </div>
+        <div class="stage" aria-hidden="true">
+          <div class="win">
+            <div class="win__bar"><i></i><i></i><i></i><span>조립·순위</span></div>
+            <div class="win__body">
+              <div class="frame frame--files is-active">
+                <div class="file f1"><em>xlsx</em><b>원본데이터.xlsx</b><small>공연 2,524행</small></div>
+                <div class="file f2"><em>xlsx</em><b>업데이트.xlsx</b><small>추가 7, 수정 3</small></div>
+                <div class="dropbox"><span></span>여기에 놓기</div>
+              </div>
+              <div class="frame frame--rank">
+                <p class="frame__cap">2026년 순위</p>
+                <ul class="bars">
+                  <li style="--w:100%"><span>BTS</span><i></i><b>3,004,102</b></li>
+                  <li style="--w:51%"><span>BIGBANG</span><i></i><b>1,545,088</b></li>
+                  <li style="--w:34%"><span>TWICE</span><i></i><b>1,023,226</b></li>
+                  <li style="--w:31%"><span>Stray Kids</span><i></i><b>923,738</b></li>
+                  <li style="--w:19%"><span>LE SSERAFIM</span><i></i><b>578,755</b></li>
+                  <li style="--w:19%"><span>TREASURE</span><i></i><b>578,000</b></li>
+                </ul>
+              </div>
+              <div class="frame frame--out">
+                <div class="sheet">
+                  <div class="sheet__row h"><span>artist</span><span>city</span><span>capacity</span><span>remarks</span></div>
+                  <div class="sheet__row"><span>BTS</span><span>Bangkok</span><span>50,000</span><span class="tag">[예정]</span></div>
+                  <div class="sheet__row"><span>BTS</span><span>Singapore</span><span>55,000</span><span class="tag">[예정]</span></div>
+                  <div class="sheet__row"><span>BIGBANG</span><span>Tokyo</span><span>55,000</span><span class="tag">[예정]</span></div>
+                  <div class="sheet__row"><span>TWICE</span><span>London</span><span>—</span><span></span></div>
+                </div>
+                <div class="sheet__tabs"><span class="on">해외 공연 현황</span><span>(2)</span><span>연도별 아티스트 목록</span><span>변수 설명</span></div>
+                <div class="badge"><span></span>결과 엑셀 준비됨</div>
+              </div>
+            </div>
           </div>
-          <input type="file" id="fileLeg" accept=".xlsx" class="hide">
-        </div>
-        <div class="panel__foot">
-          <p class="status" id="cnvStatus" role="status" aria-live="polite"></p>
-          <button class="btn btn--primary btn--lg" id="cnvBtn" disabled>원본 데이터 파일 받기</button>
         </div>
       </div>
+    </section>
 
-      <div class="panel panel--quiet">
-        <h2 class="panel__title">변환하면 이렇게 바뀌어요</h2>
-        <ul class="bullets">
-          <li>[예정] 태그는 떼고, attendance의 "(소속사 제공)" 같은 표시는 attendance_label 열로 옮겨요.</li>
-          <li>원자료에서 attendance가 수식(수용인원×일수)이던 행은 attendance_rule 열에 표시해요.</li>
-          <li>공연장마스터는 기존 기입값으로 초안만 만들어요. source(출처)를 적은 공연장만 빈 capacity를 채우는 데 쓰여요.</li>
-          <li>공식누적 시트에 공식 합계(예: 돔 4회 합계 17만 명)를 적고, 공연목록의 집계묶음 열에 같은 이름을 적으면 순위 산정에 반영돼요.</li>
-        </ul>
+    <!-- 챕터 2: 검증 -->
+    <section class="chapter" id="intro-chk" data-tab="chk" aria-labelledby="ch2-title">
+      <div class="chapter__sticky">
+        <div class="chapter__copy">
+          <p class="chapter__no">기능 2</p>
+          <h2 class="chapter__title" id="ch2-title">검증</h2>
+          <p class="chapter__desc">21개 규칙으로 모든 행을 훑어 오류 후보를 찾고, 어디를 고쳐야 하는지 알려 줍니다.</p>
+          <ol class="steps">
+            <li class="is-active"><b>데이터셋 올리기</b><span>결과 엑셀을 올리면 두 시트를 행마다 대조해요. 조립 직후에는 자동으로 실행돼요.</span></li>
+            <li><b>등급별로 확인</b><span>오류, 확인필요, 참고 세 등급으로 나눠 보여 주고 항목별로 걸러 볼 수 있어요.</span></li>
+            <li><b>리포트로 내보내기</b><span>오류 리포트와 공연장 마스터 초안을 엑셀로 받아 출처를 확인해요.</span></li>
+          </ol>
+          <a class="link" href="#sec-chk">검증 바로 쓰기 <span aria-hidden="true">›</span></a>
+        </div>
+        <div class="stage" aria-hidden="true">
+          <div class="win">
+            <div class="win__bar"><i></i><i></i><i></i><span>검증</span></div>
+            <div class="win__body">
+              <div class="frame frame--scan is-active">
+                <div class="scan">
+                  <div class="scan__line"></div>
+                  <div class="rows"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                </div>
+                <p class="frame__cap">2,639행 검사 중</p>
+              </div>
+              <div class="frame frame--flags">
+                <div class="tiles">
+                  <div class="t t--err"><small>오류</small><b>1</b></div>
+                  <div class="t t--warn"><small>확인필요</small><b>39</b></div>
+                  <div class="t t--info"><small>참고</small><b>0</b></div>
+                </div>
+                <ul class="flags">
+                  <li><span class="d d--err"></span>관객수가 수용인원보다 많아요</li>
+                  <li><span class="d d--warn"></span>같은 공연장 capacity가 서로 달라요</li>
+                  <li><span class="d d--warn"></span>capacity에 여러 날 합계가 들어간 것 같아요</li>
+                </ul>
+              </div>
+              <div class="frame frame--export">
+                <div class="chipset"><span class="on">확인필요 39</span><span>같은 공연장 22</span><span>합계 의심 13</span></div>
+                <div class="file f3"><em>xlsx</em><b>검증리포트.xlsx</b><small>40건, 제안값 포함</small></div>
+                <div class="file f4"><em>xlsx</em><b>공연장_마스터_초안.xlsx</b><small>880곳</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+    </section>
+
+    <!-- 챕터 3: 원본 변환 -->
+    <section class="chapter" id="intro-cnv" data-tab="cnv" aria-labelledby="ch3-title">
+      <div class="chapter__sticky">
+        <div class="chapter__copy">
+          <p class="chapter__no">기능 3</p>
+          <h2 class="chapter__title" id="ch3-title">원본 변환</h2>
+          <p class="chapter__desc">지금까지 쓰던 결과 엑셀을 원본 데이터로 바꿔, 다음부터는 원본만 고치면 되게 합니다.</p>
+          <ol class="steps">
+            <li class="is-active"><b>기존 엑셀 올리기</b><span>'해외 공연 현황' 시트가 있는 파일이면 돼요. 처음 한 번만 하면 됩니다.</span></li>
+            <li><b>표시는 열로 정리</b><span>[예정] 태그는 떼고, "(소속사 제공)" 같은 표시는 별도 열로 옮겨요.</span></li>
+            <li><b>원본 데이터 받기</b><span>공연목록, 공연장마스터, 공식누적, 설정 시트로 나뉜 파일을 받아요.</span></li>
+          </ol>
+          <a class="link" href="#sec-cnv">원본 변환 바로 쓰기 <span aria-hidden="true">›</span></a>
+        </div>
+        <div class="stage" aria-hidden="true">
+          <div class="win">
+            <div class="win__bar"><i></i><i></i><i></i><span>원본 변환</span></div>
+            <div class="win__body">
+              <div class="frame frame--legacy is-active">
+                <div class="sheet">
+                  <div class="sheet__row h"><span>artist</span><span>attendance</span><span>remarks</span></div>
+                  <div class="sheet__row"><span>BTS</span><span>151,500 (소속사 제공)</span><span>Lima</span></div>
+                  <div class="sheet__row"><span>TREASURE</span><span>45,000 (소속사 제공)</span><span>Tokyo</span></div>
+                  <div class="sheet__row"><span>XG</span><span>—</span><span class="tag">[예정] Newark</span></div>
+                </div>
+                <div class="sheet__tabs"><span class="on">해외 공연 현황</span><span>(2)</span><span>연도별 아티스트 목록</span></div>
+              </div>
+              <div class="frame frame--split">
+                <div class="cols">
+                  <div><small>attendance</small><b>151,500</b><b>45,000</b><b>—</b></div>
+                  <div class="arrow"></div>
+                  <div><small>attendance_label</small><b>소속사 제공</b><b>소속사 제공</b><b>—</b></div>
+                </div>
+                <p class="frame__cap">표시를 값과 출처로 나눠요</p>
+              </div>
+              <div class="frame frame--source">
+                <div class="stack">
+                  <span>공연목록</span><span>공연장마스터</span><span>공식누적</span><span>설정</span>
+                </div>
+                <div class="badge"><span></span>원본데이터.xlsx</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 실제 도구 ================= -->
+    <div class="tools-intro" id="tools">
+      <h2>이제 직접 써 보세요.</h2>
+      <p>세 기능이 한 페이지에 이어져 있어요. 위 탭을 눌러 원하는 기능으로 바로 갈 수 있어요.</p>
+    </div>
+
+    <!-- 1 조립·순위 -->
+    <section class="tool" id="sec-asm" data-tab="asm" aria-labelledby="t1">
+      <header class="tool__head">
+        <span class="tool__no">1</span>
+        <div><h2 id="t1">조립·순위</h2><p>원본 데이터를 올리면 결과 엑셀과 순위가 나옵니다.</p></div>
+      </header>
+      <div id="pane-asm">
+        <div class="panel">
+          <div class="panel__grid">
+            <div class="field">
+              <span class="field__label" id="lbl-src">원본 데이터</span>
+              <div class="drop" id="dropSrc" role="button" tabindex="0" aria-labelledby="lbl-src srcName">
+                <span class="drop__icon" aria-hidden="true"></span>
+                <b>끌어다 놓거나 눌러서 선택</b>
+                <small id="srcName">'공연목록' 시트가 있는 .xlsx</small>
+              </div>
+              <input type="file" id="fileSrc" accept=".xlsx" class="hide">
+            </div>
+            <div class="field">
+              <span class="field__label" id="lbl-upd">업데이트 파일 <em>선택</em></span>
+              <div class="drop" id="dropUpd" role="button" tabindex="0" aria-labelledby="lbl-upd updName">
+                <span class="drop__icon" aria-hidden="true"></span>
+                <b>추가·수정·삭제할 행</b>
+                <small id="updName">'업데이트' 시트가 있는 .xlsx</small>
+              </div>
+              <input type="file" id="fileUpd" accept=".xlsx" class="hide">
+              <a href="#" class="link link--sm" id="dlTpl">빈 업데이트 양식 받기</a>
+            </div>
+          </div>
+          <div class="settings">
+            <label class="field"><span class="field__label">기준일</span><input type="date" id="aRef"><span class="field__hint">이 날짜 이후 공연은 [예정]으로 표시돼요.</span></label>
+            <label class="field"><span class="field__label">자동 순위 연도</span><input type="search" id="aYears" placeholder="2026" inputmode="numeric"><span class="field__hint">여러 해는 쉼표로 구분해요.</span></label>
+            <label class="field"><span class="field__label">상세 수록 팀 수</span><input type="number" id="aTop" value="15" min="1" max="50"><span class="field__hint">이보다 아래 순위는 비고에 요약돼요.</span></label>
+          </div>
+          <div class="panel__foot">
+            <p class="status" id="asmStatus" role="status" aria-live="polite"></p>
+            <button class="btn btn--accent btn--lg" id="asmBtn" disabled>결과 엑셀 만들기</button>
+          </div>
+        </div>
+
+        <div class="panel panel--result hide" id="asmResult">
+          <div class="result-head">
+            <h3 id="asmTitle">순위 산정 결과</h3>
+            <div class="actions">
+              <button class="btn btn--accent" id="dlOut">결과 엑셀 받기</button>
+              <button class="btn btn--ghost hide" id="dlNewSrc">새 원본 받기</button>
+              <button class="btn btn--ghost" id="dlBasis">산정 근거 받기</button>
+              <button class="btn btn--plain" id="toChk">검증 결과 보기 <span aria-hidden="true">›</span></button>
+            </div>
+          </div>
+          <div class="stats" id="asmStats"></div>
+          <div id="updWrap"></div>
+          <div id="rankWrap"></div>
+          <div id="asmNotes"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 검증 -->
+    <section class="tool" id="sec-chk" data-tab="chk" aria-labelledby="t2">
+      <header class="tool__head">
+        <span class="tool__no">2</span>
+        <div><h2 id="t2">검증</h2><p>오류 후보를 보여줄 뿐, 최종 판단은 출처를 확인한 사람이 합니다.</p></div>
+      </header>
+      <div id="pane-chk">
+        <div class="panel">
+          <div class="panel__grid">
+            <div class="field">
+              <span class="field__label" id="lbl-main">데이터셋 엑셀</span>
+              <div class="drop" id="dropMain" role="button" tabindex="0" aria-labelledby="lbl-main mainName">
+                <span class="drop__icon" aria-hidden="true"></span>
+                <b>끌어다 놓거나 눌러서 선택</b>
+                <small id="mainName">'해외 공연 현황' 시트가 있는 .xlsx</small>
+              </div>
+              <input type="file" id="fileMain" accept=".xlsx,.xlsm" class="hide">
+            </div>
+            <div class="field">
+              <span class="field__label" id="lbl-venue">공연장 마스터 <em>선택</em></span>
+              <div class="drop" id="dropVenue" role="button" tabindex="0" aria-labelledby="lbl-venue venueName">
+                <span class="drop__icon" aria-hidden="true"></span>
+                <b>공연장 마스터 .xlsx</b>
+                <small id="venueName">location, city, capacity, source 열</small>
+              </div>
+              <input type="file" id="fileVenue" accept=".xlsx,.csv" class="hide">
+            </div>
+          </div>
+          <div class="settings settings--two">
+            <label class="field"><span class="field__label">기준일</span><input type="date" id="refDate"><span class="field__hint">[예정] 표시가 맞는지 이 날짜로 판단해요.</span></label>
+            <label class="field"><span class="field__label">엄격 검사 시작 연도</span><input type="number" id="strictFrom" value="2025" min="2010" max="2100"><span class="field__hint">이 연도부터는 규칙을 모두 적용해요.</span></label>
+          </div>
+          <div class="panel__foot">
+            <p class="status" id="status" role="status" aria-live="polite"></p>
+            <button class="btn btn--accent btn--lg" id="runBtn" disabled>검사 실행</button>
+          </div>
+        </div>
+
+        <div class="panel panel--result hide" id="resultCard">
+          <div class="stats" id="stats"></div>
+          <div class="filters">
+            <label class="field"><span class="field__label">연도 범위</span><span class="range"><input type="number" id="yearFrom" aria-label="시작 연도"><span aria-hidden="true">–</span><input type="number" id="yearTo" aria-label="끝 연도"></span></label>
+            <label class="field field--grow"><span class="field__label">검색</span><input type="search" id="q" placeholder="아티스트나 내용, 예: Kai Tak, BTS"></label>
+            <div class="field"><span class="field__label">내보내기</span><span class="actions"><button class="btn btn--ghost" id="dlXlsx">오류 리포트</button><button class="btn btn--ghost" id="dlVenue">공연장 마스터 초안</button></span></div>
+          </div>
+          <div class="chips" id="sevChips" aria-label="등급 필터"></div>
+          <div class="chips chips--checks" id="checkChips" aria-label="검사 항목 필터"></div>
+          <div class="tablewrap tablewrap--tall"><table>
+            <thead><tr><th>등급</th><th>검사 항목</th><th>시트</th><th class="num">엑셀 행</th><th class="num">no</th><th class="num">연도</th><th>아티스트</th><th>내용</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table></div>
+          <p class="note" id="shown"></p>
+        </div>
+
+        <details class="rules">
+          <summary>검사하는 규칙 21개 보기</summary>
+          <ul class="rules__list">
+            <li>국내 공연 포함</li><li>관객수가 수용인원보다 큼</li><li>capacity에 여러 날 합계 의심</li>
+            <li>관객수 = 수용인원 × 일수 (복사 의심)</li><li>같은 공연장 capacity 불일치</li><li>공연장 마스터와 대조</li>
+            <li>그룹 블록 끊김</li><li>연도별 목록 순위와 블록 순서</li><li>블록 안 날짜순</li>
+            <li>목록 밖(16위 이하) 상세 행</li><li>두 시트 값·변수 불일치</li><li>수식이 다른 행 참조</li>
+            <li>no 연번</li><li>분기(qt)</li><li>날짜와 일수 모순</li>
+            <li>중복 행</li><li>[예정]·[일부 예정] 표시 누락</li><li>끝난 [예정] 공연</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- 3 원본 변환 -->
+    <section class="tool" id="sec-cnv" data-tab="cnv" aria-labelledby="t3">
+      <header class="tool__head">
+        <span class="tool__no">3</span>
+        <div><h2 id="t3">원본 변환</h2><p>처음 한 번만 하면 돼요. 이후로는 원본 데이터로 조립합니다.</p></div>
+      </header>
+      <div id="pane-cnv">
+        <div class="panel">
+          <div class="panel__grid panel__grid--cnv">
+            <div class="field">
+              <span class="field__label" id="lbl-leg">기존 결과 엑셀</span>
+              <div class="drop" id="dropLeg" role="button" tabindex="0" aria-labelledby="lbl-leg legName">
+                <span class="drop__icon" aria-hidden="true"></span>
+                <b>끌어다 놓거나 눌러서 선택</b>
+                <small id="legName">'해외 공연 현황' 시트가 있는 .xlsx</small>
+              </div>
+              <input type="file" id="fileLeg" accept=".xlsx" class="hide">
+            </div>
+            <ul class="bullets">
+              <li>[예정] 태그는 떼고, attendance의 "(소속사 제공)" 같은 표시는 attendance_label 열로 옮겨요.</li>
+              <li>attendance가 수식(수용인원×일수)이던 행은 attendance_rule 열에 표시해요.</li>
+              <li>공연장마스터는 기존 기입값으로 초안만 만들어요. source(출처)를 적은 공연장만 빈 capacity를 채우는 데 쓰여요.</li>
+              <li>공식누적 시트에 공식 합계를 적고 공연목록의 집계묶음 열에 같은 이름을 적으면 순위에 반영돼요.</li>
+            </ul>
+          </div>
+          <div class="panel__foot">
+            <p class="status" id="cnvStatus" role="status" aria-live="polite"></p>
+            <button class="btn btn--accent btn--lg" id="cnvBtn" disabled>원본 데이터 파일 받기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 마무리 ================= -->
+    <section class="closing" aria-labelledby="closing-title">
+      <h2 id="closing-title">공식 수치만,<br>출처와 함께.</h2>
+      <p>attendance는 공식 출처가 있는 값만 넣고, 추정이거나 애매하면 공란으로 둡니다.</p>
+      <a class="btn btn--accent btn--lg" href="#sec-asm">결과 엑셀 만들러 가기</a>
     </section>
   </main>
 
   <footer class="foot">
-    <p>공식 기관 자료 기준이에요. attendance는 공식 출처가 있는 값만 넣고, 추정이거나 애매하면 공란으로 둡니다.</p>
-    <p>파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않아요.</p>
+    <span>K-pop 해외공연 데이터 도구</span>
+    <span>파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않아요.</span>
   </footer>
 </body>
 </html>
