@@ -82,6 +82,8 @@
     const probe = vh * 0.4;
     const z = zones.find((el) => { const r = el.getBoundingClientRect(); return r.top <= probe && r.bottom > probe; });
     setTab(z ? z.dataset.tab : null);
+
+    updateDock(vh);
   }
 
   let ticking = false;
@@ -94,14 +96,56 @@
   window.addEventListener('resize', () => { placeThumb(); onScroll(); });
   if (document.fonts) document.fonts.ready.then(placeThumb);
 
-  // 탭 클릭 시 해당 기능으로 부드럽게 이동 (기본 앵커 이동 대신)
-  tabs.forEach((a) => a.addEventListener('click', (e) => {
-    const el = document.querySelector(a.getAttribute('href'));
+  /* ---------- 기능으로 이동 + 도착 표시 ---------- */
+  function go(hash) {
+    const el = document.querySelector(hash);
     if (!el) return;
-    e.preventDefault();
     el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-    history.replaceState(null, '', a.getAttribute('href'));
-  }));
+    history.replaceState(null, '', hash);
+    if (!el.classList.contains('tool')) return;
+    let done = false;
+    const arrive = () => {
+      if (done) return; done = true;
+      window.removeEventListener('scrollend', arrive);
+      el.classList.remove('is-arrived'); void el.offsetWidth; el.classList.add('is-arrived');
+      setTimeout(() => el.classList.remove('is-arrived'), 1900);
+      const h = el.querySelector('.tool__head h2'); if (h) h.focus({ preventScroll: true });   // 키보드·스크린리더도 도착 위치에서 시작
+    };
+    if ('onscrollend' in window && !reduce) { window.addEventListener('scrollend', arrive); setTimeout(arrive, 1500); }
+    else setTimeout(arrive, reduce ? 0 : 700);
+  }
+  // 탭, 상단 버튼, 기능 소개의 바로 쓰기, 따라다니는 바로가기 모두 같은 방식으로 이동
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('.seg .tab, .bar__cta, .cta[href^="#"]');
+    if (!a) return;
+    e.preventDefault();
+    go(a.getAttribute('href'));
+  });
+
+  /* ---------- 따라다니는 바로가기: 기능 소개 구간에서만 보임 ---------- */
+  const dock = document.getElementById('dock');
+  const dockName = document.getElementById('dockName');
+  const dockGo = document.getElementById('dockGo');
+  const dots = dock ? [...dock.querySelectorAll('.dock__dots i')] : [];
+  const NAMES = { asm: '조립·순위', chk: '검증', cnv: '원본 변환' };
+  const ORDER = ['asm', 'chk', 'cnv'];
+  let dockKey = null;
+  function updateDock(vh) {
+    if (!dock) return;
+    const ch = chapters.find((c) => { const r = c.el.getBoundingClientRect(); return r.top <= vh * 0.6 && r.bottom > vh * 0.6; });
+    const k = ch ? ch.el.dataset.tab : null;
+    const on = !!k;
+    dock.classList.toggle('is-on', on);
+    dock.setAttribute('aria-hidden', String(!on));
+    dockGo.tabIndex = on ? 0 : -1;
+    if (!k || k === dockKey) return;
+    dockKey = k;
+    dockName.textContent = NAMES[k];
+    dockName.classList.remove('swap'); void dockName.offsetWidth; dockName.classList.add('swap');
+    dockGo.setAttribute('href', '#sec-' + k);
+    const idx = ORDER.indexOf(k);
+    dots.forEach((d, i) => { d.classList.toggle('on', i === idx); d.classList.toggle('done', i < idx); });
+  }
 
   frame();
 })();

@@ -303,7 +303,7 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
   .chapter__desc { font-size: 15px; margin-top: 8px; }
   .steps { margin: 14px 0 0; }
   .steps li:not(.is-active) { display: none; }
-  .chapter__copy .link { display: none; }
+  .chapter__actions { display: none; }
   .win { aspect-ratio: 4 / 3.4; max-width: 520px; }
   .frame { padding: 18px; gap: 12px; }
   .bars li { grid-template-columns: 78px 1fr auto; }
@@ -468,4 +468,62 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .stack { gap: 8px; }
   .stack span { padding: 10px 14px; font-size: 14px; }
   .sheet__row span { padding: 8px 10px; }
+}
+
+
+/* =========================================================
+   바로 쓰기 버튼 · 따라다니는 바로가기 · 도착 표시
+   ========================================================= */
+.cta { --h: 56px; position: relative; display: inline-flex; align-items: center; gap: 14px; height: var(--h); padding: 0 8px 0 26px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink); font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(1, 83, 159, .35), inset 0 1px 0 rgba(255, 255, 255, .14);
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease), background-color .25s; }
+.cta::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; box-shadow: 0 0 0 2px var(--accent-hi); opacity: 0; transform: scale(.96); transition: opacity .25s, transform .25s var(--ease); pointer-events: none; }
+.cta__arrow { display: grid; place-items: center; width: calc(var(--h) - 16px); height: calc(var(--h) - 16px); border-radius: 50%; background: rgba(255, 255, 255, .16); transition: transform .3s var(--ease), background-color .25s; }
+.cta__arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transform: rotate(90deg); }
+.cta:hover { background: var(--accent-2); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(1, 83, 159, .45), inset 0 1px 0 rgba(255, 255, 255, .14); }
+.cta:hover .cta__arrow { background: rgba(255, 255, 255, .26); transform: translateY(2px); }
+.cta:hover::before, .cta:focus-visible::before { opacity: 1; transform: scale(1); }
+.cta:active { transform: translateY(0) scale(.98); }
+
+.chapter__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin-top: 4px; }
+.chapter__hint { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--faint); }
+.chapter__hint-ico { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; animation: nudge 1.8s var(--ease) infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+
+/* 따라다니는 바로가기 */
+.dock { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 60; display: flex; align-items: center; gap: 18px;
+  padding: 8px 8px 8px 20px; border-radius: 999px; background: var(--bar-bg-solid); backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px);
+  box-shadow: inset 0 0 0 1px var(--line), 0 18px 50px rgba(0, 0, 0, .28);
+  transform: translate(-50%, 140%); opacity: 0; pointer-events: none; transition: transform .45s var(--ease), opacity .3s; }
+.dock.is-on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.dock__info { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.dock__dots { display: flex; gap: 5px; }
+.dock__dots i { width: 6px; height: 6px; border-radius: 999px; background: var(--line-2); transition: width .35s var(--ease), background-color .3s; }
+.dock__dots i.on { width: 20px; background: var(--accent-hi); }
+.dock__dots i.done { background: var(--muted); }
+.dock__text { display: grid; line-height: 1.2; }
+.dock__text small { font-size: 11px; color: var(--faint); font-weight: 500; }
+.dock__text b { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.dock__text b.swap { animation: swap .35s var(--ease); }
+@keyframes swap { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.cta--dock { --h: 46px; padding-left: 20px; font-size: 15px; gap: 10px; box-shadow: 0 6px 18px rgba(1, 83, 159, .35); }
+
+/* 도구에 도착했을 때 잠깐 테두리 강조 */
+.tool.is-arrived .panel:first-child { animation: arrive 1.8s var(--ease); }
+.tool.is-arrived .tool__no { animation: arriveNo 1.6s var(--ease); }
+@keyframes arrive { 0% { outline: 3px solid transparent; outline-offset: 10px; } 25% { outline: 3px solid var(--accent-hi); outline-offset: 4px; } 100% { outline: 3px solid transparent; outline-offset: 4px; } }
+@keyframes arriveNo { 0%, 100% { transform: none; } 30% { transform: scale(1.12); } }
+.tool__head h2:focus { outline: none; }
+
+/* 좁은 화면에서는 기능 소개 안의 버튼 대신 아래 바로가기 하나만 */
+@media (max-width: 900px) { .chapter__actions { display: none; } }
+@media (max-width: 760px) {
+  .dock { left: 12px; right: 12px; transform: translateY(140%); justify-content: space-between; padding-left: 16px; }
+  .dock.is-on { transform: none; }
+  .cta--dock { --h: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock { transition: opacity .2s; transform: translate(-50%, 0); }
+  @media (max-width: 760px) { .dock { transform: none; } }
 }

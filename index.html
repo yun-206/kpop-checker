@@ -94,7 +94,10 @@
             <li><b>공식 수치로 순위 계산</b><span>공식 관객수가 있으면 그 값, 없으면 수용인원×일수로 더해요. 합계만 발표된 공연은 한 번만 더해요.</span></li>
             <li><b>결과 엑셀 받기</b><span>두 시트, 연도별 목록, 변수 설명이 한 파일로 나오고, 예정 공연은 색으로 표시돼요.</span></li>
           </ol>
-          <a class="link" href="#sec-asm">조립·순위 바로 쓰기 <span aria-hidden="true">›</span></a>
+          <div class="chapter__actions">
+            <a class="cta" href="#sec-asm" data-go="asm"><span>조립·순위 바로 쓰기</span><span class="cta__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+            <span class="chapter__hint"><span class="chapter__hint-ico" aria-hidden="true">↓</span>계속 내리면 다음 기능: 검증</span>
+          </div>
         </div>
         <div class="stage" aria-hidden="true">
           <div class="win">
@@ -145,7 +148,10 @@
             <li><b>등급별로 확인</b><span>오류, 확인필요, 참고 세 등급으로 나눠 보여 주고 항목별로 걸러 볼 수 있어요.</span></li>
             <li><b>리포트로 내보내기</b><span>오류 리포트와 공연장 마스터 초안을 엑셀로 받아 출처를 확인해요.</span></li>
           </ol>
-          <a class="link" href="#sec-chk">검증 바로 쓰기 <span aria-hidden="true">›</span></a>
+          <div class="chapter__actions">
+            <a class="cta" href="#sec-chk" data-go="chk"><span>검증 바로 쓰기</span><span class="cta__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+            <span class="chapter__hint"><span class="chapter__hint-ico" aria-hidden="true">↓</span>계속 내리면 다음 기능: 원본 변환</span>
+          </div>
         </div>
         <div class="stage" aria-hidden="true">
           <div class="win">
@@ -193,7 +199,10 @@
             <li><b>표시는 열로 정리</b><span>[예정] 태그는 떼고, "(소속사 제공)" 같은 표시는 별도 열로 옮겨요.</span></li>
             <li><b>원본 데이터 받기</b><span>공연목록, 공연장마스터, 공식누적, 설정 시트로 나뉜 파일을 받아요.</span></li>
           </ol>
-          <a class="link" href="#sec-cnv">원본 변환 바로 쓰기 <span aria-hidden="true">›</span></a>
+          <div class="chapter__actions">
+            <a class="cta" href="#sec-cnv" data-go="cnv"><span>원본 변환 바로 쓰기</span><span class="cta__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+            <span class="chapter__hint"><span class="chapter__hint-ico" aria-hidden="true">↓</span>계속 내리면 바로 도구가 나와요</span>
+          </div>
         </div>
         <div class="stage" aria-hidden="true">
           <div class="win">
@@ -238,7 +247,7 @@
     <section class="tool" id="sec-asm" data-tab="asm" aria-labelledby="t1">
       <header class="tool__head">
         <span class="tool__no">1</span>
-        <div><h2 id="t1">조립·순위</h2><p>원본 데이터를 올리면 결과 엑셀과 순위가 나옵니다.</p></div>
+        <div><h2 id="t1" tabindex="-1">조립·순위</h2><p>원본 데이터를 올리면 결과 엑셀과 순위가 나옵니다.</p></div>
       </header>
       <div id="pane-asm">
         <div class="panel">
@@ -296,7 +305,7 @@
     <section class="tool" id="sec-chk" data-tab="chk" aria-labelledby="t2">
       <header class="tool__head">
         <span class="tool__no">2</span>
-        <div><h2 id="t2">검증</h2><p>오류 후보를 보여줄 뿐, 최종 판단은 출처를 확인한 사람이 합니다.</p></div>
+        <div><h2 id="t2" tabindex="-1">검증</h2><p>오류 후보를 보여줄 뿐, 최종 판단은 출처를 확인한 사람이 합니다.</p></div>
       </header>
       <div id="pane-chk">
         <div class="panel">
@@ -364,7 +373,7 @@
     <section class="tool" id="sec-cnv" data-tab="cnv" aria-labelledby="t3">
       <header class="tool__head">
         <span class="tool__no">3</span>
-        <div><h2 id="t3">원본 변환</h2><p>처음 한 번만 하면 돼요. 이후로는 원본 데이터로 조립합니다.</p></div>
+        <div><h2 id="t3" tabindex="-1">원본 변환</h2><p>처음 한 번만 하면 돼요. 이후로는 원본 데이터로 조립합니다.</p></div>
       </header>
       <div id="pane-cnv">
         <div class="panel">
@@ -405,5 +414,14 @@
     <span>K-pop 해외공연 데이터 도구</span>
     <span>파일은 이 브라우저 안에서만 처리되고 어디에도 전송되지 않아요.</span>
   </footer>
+
+  <!-- ================= 따라다니는 바로가기 (기능 소개 구간에서만 표시) ================= -->
+  <nav class="dock" id="dock" aria-label="지금 보는 기능 바로 쓰기" aria-hidden="true">
+    <div class="dock__info">
+      <span class="dock__dots" aria-hidden="true"><i data-k="asm"></i><i data-k="chk"></i><i data-k="cnv"></i></span>
+      <span class="dock__text"><small>지금 보는 기능</small><b id="dockName">조립·순위</b></span>
+    </div>
+    <a class="cta cta--dock" id="dockGo" href="#sec-asm" data-go="asm" tabindex="-1"><span>바로 쓰기</span><span class="cta__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+  </nav>
 </body>
 </html>
