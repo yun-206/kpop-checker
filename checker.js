@@ -41,7 +41,7 @@
       for (const h of headers) {
         if (!h.name) continue;
         const cell = ws[XLSX.utils.encode_cell({ r, c: h.col })];
-        if (cell) { const v = cell.t === 'z' ? undefined : cell.v; cells[h.name] = { v, f: cell.f, t: cell.t }; if (v !== undefined && v !== '') any = true; }
+        if (cell) { const v = cell.t === 'z' ? undefined : cell.v; cells[h.name] = { v, f: cell.f, t: cell.t, z: cell.z }; if (v !== undefined && v !== '') any = true; }
         else cells[h.name] = { v: undefined };
       }
       if (any) rows.push({ r: r + 1, cells });
@@ -52,6 +52,19 @@
   }
 
   const val = (row, name) => row.cells[name] ? row.cells[name].v : undefined;
+  // remarks에서 공연 회차 수 읽기 (없으면 days). 예: "총 3회", "3일 6회", "1일 2회"
+  function showCount(rem, days) {
+    const s = String(rem || '');
+    let m = /총\s*(\d+)\s*회(?!차)/.exec(s);
+    if (m) { const n = Number(m[1]); return n >= days ? n : days; }
+    m = /(\d+)\s*일\s*(\d+)\s*회(?!차)/.exec(s);
+    if (m) {
+      const d = Number(m[1]), n = Number(m[2]);
+      if (d === days && n >= days) return n;          // "3일 6회"
+      if (d === 1 && n > 1) return n * days;          // "1일 2회" = 매일 n회
+    }
+    return days;
+  }
 
   function run(wb, opts) {
     opts = opts || {};
@@ -108,9 +121,20 @@
       if (cap !== undefined && cap !== null && cap !== '' && !isNum(cap)) add(SEV.WARN, 'capacity 형식', MAIN, row, `capacity가 숫자가 아니에요('${cap}'). 수식이 오류(#VALUE)가 나요.`);
       if (isNum(cap) && isNum(att) && isNum(days) && days > 0) {
         const perDay = att / days;
-        if (perDay > cap * 1.05) add(SEV.ERROR, '관객수 > 수용인원', MAIN, row, `하루 관객 ${Math.round(perDay).toLocaleString()}명이 capacity ${cap.toLocaleString()}보다 커요 — capacity가 틀렸을 가능성이 높아요.`);
+        // 하루 여러 회 공연: remarks의 "총 n회" / "n일 m회" / "1일 2회"로 회차 수를 읽어 회당 관객으로 판단
+        const shows = showCount(rem, days);
+        const perShow = att / shows;
+        if (perShow > cap * 1.05) add(SEV.ERROR, '관객수 > 수용인원', MAIN, row, shows > days
+          ? `총 ${shows}회 기준 회당 관객 ${Math.round(perShow).toLocaleString()}명이 capacity ${cap.toLocaleString()}보다 커요 — capacity가 틀렸을 가능성이 높아요.`
+          : `하루 관객 ${Math.round(perDay).toLocaleString()}명이 capacity ${cap.toLocaleString()}보다 커요 — capacity가 틀렸을 가능성이 높아요. 하루 여러 회 공연이면 remarks에 "총 n회"를 적어 주세요.`);
+        else if (perDay > cap * 1.05) add(SEV.INFO, '하루 여러 회 공연', MAIN, row, `하루 평균 관객 ${Math.round(perDay).toLocaleString()}명이 capacity보다 많지만 remarks의 총 ${shows}회 기준 회당 ${Math.round(perShow).toLocaleString()}명이라 수용인원 안이에요.`);
         if (days > 1 && cap >= att * 0.9 && perDay < cap * 0.6) add(SEV.WARN, 'capacity에 합계 의심', MAIN, row, `capacity ${cap.toLocaleString()}가 ${days}일 관객 합계(${att.toLocaleString()})와 비슷해요 — 1일 수용인원이 아니라 여러 날 합계를 넣었거나, 공연장 규모 대비 관객이 크게 적어요. 출처를 확인하세요.`);
-        if (att === cap * days) add(isNum(year) && year >= strictFrom ? SEV.WARN : SEV.INFO, '관객수=수용인원×일수', MAIN, row, `attendance(${att.toLocaleString()})가 capacity×days와 정확히 같아요 — 수용인원을 복사한 건 아닌지 출처를 확인하세요(공식 '전석 매진 ○만 명' 발표라면 괜찮음).`);
+        if (att === cap * days) {
+          // attendance 셀 서식에 "(소속사 제공)" 같은 공식 출처 표시가 있으면 공식 전석 매진 발표로 보고 참고로 낮춤
+          const lab = /"\s*\(([^)]+)\)\s*"/.exec((row.cells['attendance'] || {}).z || '');
+          if (lab) add(SEV.INFO, '관객수=수용인원×일수', MAIN, row, `attendance(${att.toLocaleString()})가 capacity×days와 같지만 '${lab[1]}' 공식 수치라 참고로만 표시해요.`);
+          else add(isNum(year) && year >= strictFrom ? SEV.WARN : SEV.INFO, '관객수=수용인원×일수', MAIN, row, `attendance(${att.toLocaleString()})가 capacity×days와 정확히 같아요 — 수용인원을 복사한 건 아닌지 출처를 확인하세요(공식 '전석 매진 ○만 명' 발표라면 괜찮음).`);
+        }
       }
       // 수식 (본 시트)
       if (C['qt'] && C['start_date']) {

@@ -167,7 +167,7 @@ bindDrop($('dropSrc'), $('fileSrc'), async (f) => {
 bindDrop($('dropUpd'), $('fileUpd'), async (f) => {
   try {
     updData = KpopAssembler.readUpdate(await readWb(f));
-    $('updName').textContent = `${f.name}, ${updData.rows.length}행, 공식누적 ${updData.official.length}건`;
+    $('updName').textContent = `${f.name}, 공연 ${updData.rows.length}행, 공식누적 ${updData.official.length}건, 목록 ${updData.list.length}건${updData.master.length ? `, 공연장마스터 ${updData.master.length}건` : ''}`;
   } catch (e) { updData = null; $('updName').textContent = '읽기 실패: ' + e.message; return false; }
 });
 $('dlTpl').onclick = async (e) => { e.preventDefault(); saveBuf(await KpopAssembler.writeUpdate([], []), 'update_template.xlsx'); };
@@ -176,7 +176,7 @@ $('asmBtn').onclick = async () => {
   $('asmStatus').textContent = '만드는 중…';
   try {
     merged = srcData; updLog = [];
-    if (updData) { const r = KpopAssembler.applyUpdate(srcData, updData); merged = r.src; updLog = r.log; }
+    if (updData) { const r = KpopAssembler.applyUpdate(srcData, updData, { autoYears: $('aYears').value }); merged = r.src; updLog = r.log; }
     merged.settings = Object.assign({}, merged.settings, { 기준일: $('aRef').value, 자동순위연도: $('aYears').value || merged.settings['자동순위연도'], 상위N: Number($('aTop').value) || 15 });
     asmPlan = KpopAssembler.plan(merged, { refDate: $('aRef').value, autoYears: $('aYears').value, topN: Number($('aTop').value) });
     outBuf = await KpopAssembler.writeOutput(merged, asmPlan);
@@ -204,7 +204,11 @@ function renderAsm(chk) {
     const list = p.listRank[y] || [];
     const rk = p.rankings[y] || [];
     const changed = rk.slice(0, p.topN).some((x, i) => list[i] !== x.artist);
+    const lrow = merged.list && merged.list.rows.find(r => Number(r[0]) === y);
+    const drop = (p.subDrop || {})[y] || [];
+    const subs = lrow ? KpopAssembler.listSubs(lrow).filter(a => !drop.includes(KpopChecker.norm(a))) : [];
     h += `<h3 style="margin:18px 0 4px;font-size:16px">${y}년 ${changed ? '<span class="up">기존 목록과 순위가 달라요</span>' : '<span class="same">기존 목록과 같음</span>'}</h3>
+    ${subs.length ? `<p class="note" style="margin:0 0 6px">목록 SUB 칸: ${subs.map(esc2).join(', ')}</p>` : ''}
     <div class="tablewrap"><table><thead><tr><th class="num">순위</th><th>아티스트</th><th class="num">합계</th><th class="num">공식누적</th><th class="num">공식 관객수</th><th class="num">수용인원×일수</th><th class="num">행</th><th class="num">수치 없는 행</th><th>기존 목록</th></tr></thead><tbody>` +
       rk.map(x => {
         const was = list.indexOf(x.artist) + 1;
@@ -218,11 +222,17 @@ function renderAsm(chk) {
   $('rankWrap').innerHTML = h || '<p class="note">자동 순위 연도가 없어요. 원본 순서 그대로 만들었어요.</p>';
   $('dlNewSrc').classList.toggle('hide', !updData);
   if (updData) {
-    const cls = { 추가: 'r-add', 수정: 'r-mod', 삭제: 'r-del', 오류: 'r-err', 건너뜀: 'r-err' };
+    const cls = { 추가: 'r-add', 수정: 'r-mod', 목록: 'r-mod', 삭제: 'r-del', 오류: 'r-err', 건너뜀: 'r-err' };
     const cnt = (k) => updLog.filter(l => l.결과 === k).length;
-    $('updWrap').innerHTML = `<h3 style="margin:18px 0 4px;font-size:16px">업데이트 반영 — 추가 ${cnt('추가')} · 수정 ${cnt('수정')} · 삭제 ${cnt('삭제')}${cnt('오류') + cnt('건너뜀') ? ` · <span class="up">확인 필요 ${cnt('오류') + cnt('건너뜀')}</span>` : ''}</h3>
-    <div class="tablewrap"><table><thead><tr><th>행</th><th>결과</th><th>연도</th><th>아티스트</th><th>대상</th><th>내용</th><th>근거</th></tr></thead><tbody>` +
-      updLog.map(l => `<tr><td>${esc2(l.행)}</td><td class="${cls[l.결과] || ''}">${esc2(l.결과)}</td><td>${esc2(l.year)}</td><td>${esc2(l.artist)}</td><td>${esc2(l.대상)}</td><td>${esc2(l.내용)}</td><td class="muted" style="max-width:280px;word-break:break-all">${esc2(l.근거)}</td></tr>`).join('') + `</tbody></table></div>`;
+    const isList = (l) => String(l.행).startsWith('목록'), isMaster = (l) => String(l.행).startsWith('마스터');
+    const tbl = (logs, withLoc) => `<div class="tablewrap tablewrap--log"><table><thead><tr><th>행</th><th>결과</th><th>연도</th><th>아티스트</th><th>${withLoc ? '대상' : '칸'}</th><th>내용</th><th>근거</th></tr></thead><tbody>` +
+      logs.map(l => `<tr><td>${esc2(l.행)}</td><td class="${cls[l.결과] || ''}">${esc2(l.결과)}</td><td>${esc2(l.year)}</td><td>${esc2(l.artist)}</td><td>${esc2(l.대상)}</td><td>${esc2(l.내용)}</td><td class="muted" style="max-width:280px;word-break:break-all">${esc2(l.근거)}</td></tr>`).join('') + `</tbody></table></div>`;
+    const rowLog = updLog.filter(l => !isList(l) && !isMaster(l)), listLog = updLog.filter(isList), masterLog = updLog.filter(isMaster);
+    const rc = (k) => rowLog.filter(l => l.결과 === k).length, mc = masterLog.filter(l => /추가|수정|삭제/.test(l.결과)).length;
+    $('updWrap').innerHTML = `<h3 style="margin:18px 0 4px;font-size:16px">업데이트 반영 — 추가 ${rc('추가')} · 수정 ${rc('수정')} · 삭제 ${rc('삭제')}${cnt('목록') ? ` · 목록 ${cnt('목록')}` : ''}${mc ? ` · 공연장마스터 ${mc}` : ''}${cnt('오류') + cnt('건너뜀') ? ` · <span class="up">확인 필요 ${cnt('오류') + cnt('건너뜀')}</span>` : ''}</h3>` +
+      (rowLog.length ? tbl(rowLog, true) : '') +
+      (listLog.length ? `<h4 style="margin:16px 0 0;font-size:14px">연도별 아티스트 목록 변경</h4>` + tbl(listLog, false) : '') +
+      (masterLog.length ? `<h4 style="margin:16px 0 0;font-size:14px">공연장마스터 변경</h4>` + tbl(masterLog, true) : '');
   } else $('updWrap').innerHTML = '';
   $('asmNotes').innerHTML = p.notes.length ? `<p class="note"><b>참고</b><br>${p.notes.map(n => esc2(`${n.year} ${n.artist} — ${n.kind}: ${n.detail}`)).join('<br>')}</p>` : '';
   $('asmTitle').textContent = `순위 산정 결과 (기준일 ${$('aRef').value})`;

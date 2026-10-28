@@ -406,6 +406,7 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.8); }
 /* 표 */
 .tablewrap { margin-top: 16px; overflow: auto; border-radius: var(--r-lg); box-shadow: inset 0 0 0 1px var(--line); background: var(--bg-2); }
 .tablewrap--tall { max-height: min(70vh, 760px); }
+.tablewrap--log { max-height: min(46vh, 420px); }
 table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 860px; font-size: 14px; }
 th, td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
 th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); font-size: 12px; font-weight: 600; color: var(--faint); white-space: nowrap; }

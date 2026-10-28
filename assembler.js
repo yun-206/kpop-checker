@@ -35,7 +35,7 @@
         if (!cell || (cell.t === 'z' && !cell.f)) return;
         o[h] = cell.v; o['__z_' + h] = cell.z; if (cell.f) o['__f_' + h] = cell.f; any = true;
       });
-      if (any) rows.push(o);
+      if (any) { Object.defineProperty(o, '__row', { value: r + 1, enumerable: false, writable: true }); rows.push(o); }
     }
     return rows;
   }
@@ -208,8 +208,18 @@
     };
     [...out, ...appendix].forEach(r => r.__tag = tag(r));
 
+    // 자동 순위 연도: 15팀 안에 든 팀은 SUB에서 빼서 목록에 두 번 나오지 않게
+    const subDrop = {};
+    if (src.list) src.list.rows.forEach(row => {
+      const y = Number(row[0]);
+      if (!rankings[y]) return;
+      const top = rankings[y].slice(0, topN).map(x => norm(x.artist));
+      const drop = listSubs(row).filter(sname => top.includes(norm(sname)));
+      if (drop.length) { subDrop[y] = drop.map(norm); drop.forEach(a => notes.push({ kind: 'SUB 정리', year: y, artist: a, detail: `자동 순위 ${top.indexOf(norm(a)) + 1}위로 상위 ${topN}팀 안에 들어 목록 SUB 칸에서 뺐어요` })); }
+    });
+
     const capFromMaster = out.filter(r => r.__capFrom === '마스터').length;
-    return { out, appendix, rankings, listRank, excluded, notes, refDate, autoYears, topN, capFromMaster };
+    return { out, appendix, rankings, listRank, excluded, notes, refDate, autoYears, topN, capFromMaster, subDrop };
   }
 
   /* ---------- ④ 결과 엑셀 쓰기 ---------- */
@@ -270,6 +280,8 @@
           for (let k = 0; k < 15; k++) vals[1 + k] = top[k] ?? null;
           const prevNote = String(row[16] || '').replace(/^\[자동 산정[^\]]*\]\s*/, '');
           vals[16] = `[자동 산정 ${fmt(p.refDate)}] ` + prevNote;
+          const drop = (p.subDrop || {})[y] || [];
+          if (drop.length) setSubs(vals, listSubs(vals).filter(sname => !drop.includes(norm(sname))));
         }
         vals.forEach((v, j) => { if (v !== null && v !== undefined) { const c = lst.getCell(a.origin.r + 1 + i, a.origin.c + 1 + j); c.value = v; c.border = border; } });
       });
@@ -284,50 +296,180 @@
 
 
   /* ---------- ⑤ 업데이트 파일 (추가·수정·삭제) ---------- */
-  const UPD_SHEET = '업데이트';
-  const UPD_COLS = ['작업', '대상_start_date', '대상_location', ...FIELDS, '근거'];
+  const UPD_SHEET = '업데이트', LIST_SHEET = '목록';
+  const LIST_COLS = ['작업', 'year', '순위', '찾을 문구', '값', '근거'];
+  const UPD_COLS = ['작업', '대상_start_date', '대상_location', ...FIELDS, '근거', '대상시트'];
   const META = ['gender', 'member', 'deyear', 'demon', 'deday', 'agency', 'agency2', 'agency3'];
   const CLEAR = '(비움)';
   const dkey = (d) => d instanceof Date ? fmt(d) : String(d == null ? '' : d).trim();
 
   function readUpdate(wb) {
-    if (!wb.Sheets[UPD_SHEET]) throw new Error(`'${UPD_SHEET}' 시트가 없어요`);
+    if (![UPD_SHEET, LIST_SHEET, '공식누적', '공연장마스터'].some(n => wb.Sheets[n])) throw new Error(`'${UPD_SHEET}'·'${LIST_SHEET}'·'공식누적'·'공연장마스터' 시트가 하나도 없어요`);
     const toD = (v) => serialToDate(v) || (v ?? null);
-    const rows = readTable(wb.Sheets[UPD_SHEET]).map((r, i) => {
-      r.__row = i + 2;
+    const withRow = (ws) => readTable(ws);   // 각 행에 엑셀 행 번호(__row)가 들어 있음
+    const rows = wb.Sheets[UPD_SHEET] ? withRow(wb.Sheets[UPD_SHEET]).map(r => {
       ['start_date', 'end_date', '대상_start_date'].forEach(k => { if (r[k] !== undefined && r[k] !== CLEAR) r[k] = toD(r[k]); });
       return r;
-    });
+    }) : [];
     const official = wb.Sheets['공식누적'] ? readTable(wb.Sheets['공식누적']) : [];
-    return { rows, official };
+    const list = wb.Sheets[LIST_SHEET] ? withRow(wb.Sheets[LIST_SHEET]) : [];
+    const master = wb.Sheets['공연장마스터'] ? withRow(wb.Sheets['공연장마스터']) : [];
+    return { rows, official, list, master };
   }
 
-  function applyUpdate(src, upd) {
-    const out = Object.assign({}, src, { main: src.main.map(r => Object.assign({}, r)), official: src.official.map(o => Object.assign({}, o)) });
+  /* 연도별목록 행 구조: [연도, 1위…15위, 비고, SUB…] (SUB = 비고 오른쪽 칸, 2024 IU처럼) */
+  const L_NOTE = 16, L_SUB = 17;
+  const filled = (v) => v !== null && v !== undefined && String(v).trim() !== '';
+  const listSubs = (row) => row.slice(L_SUB).filter(filled).map(v => String(v).trim());
+  const setSubs = (row, subs) => { while (row.length < L_SUB) row.push(null); row.length = L_SUB; subs.forEach(s => row.push(s)); };
+  const listTop = (row) => row.slice(1, 16).map(v => filled(v) ? String(v).trim() : '');
+
+  function applyListOps(list, ops, autoYears, log) {
+    const L = (u, 결과, 대상, 내용) => log.push({ 행: `목록 ${u.__row}`, 작업: u['작업'] || '', year: u.year ?? '', artist: filled(u['값']) && /SUB|순위/.test(u['작업'] || '') ? String(u['값']).trim() : '', 대상, 결과, 내용, 근거: u['근거'] || '' });
+    ops.forEach(u => {
+      const op = String(u['작업'] || '').replace(/\s/g, '');
+      const year = Number(u.year);
+      if (!op) return L(u, '오류', '', '작업 칸이 비어 있어요');
+      if (!list) return L(u, '오류', '', "원본에 '연도별목록' 시트가 없어요");
+      if (!year) return L(u, '오류', '', 'year가 비어 있어요');
+      const row = list.rows.find(r => Number(r[0]) === year);
+      if (!row) return L(u, '오류', '', `연도별목록에 ${year}년 행이 없어요`);
+      const v = filled(u['값']) ? String(u['값']).trim() : '';
+      const top = listTop(row), subs = listSubs(row);
+      const at = (name) => top.findIndex(a => norm(a) === norm(name));
+      if (op === 'SUB추가') {
+        if (!v) return L(u, '오류', 'SUB', '값 칸에 아티스트 이름을 적어 주세요');
+        if (at(v) >= 0) return L(u, '건너뜀', 'SUB', `${v}은(는) 이미 ${at(v) + 1}위에 있어요`);
+        if (subs.some(s => norm(s) === norm(v))) return L(u, '건너뜀', 'SUB', `${v}은(는) 이미 SUB에 있어요`);
+        subs.push(v); setSubs(row, subs);
+        L(u, '목록', 'SUB', `SUB에 ${v} 추가 → SUB: ${subs.join(', ')}`);
+      } else if (op === 'SUB삭제') {
+        if (!v) return L(u, '오류', 'SUB', '값 칸에 아티스트 이름을 적어 주세요');
+        const i = subs.findIndex(s => norm(s) === norm(v));
+        if (i < 0) return L(u, '오류', 'SUB', `${year}년 SUB에 ${v}이(가) 없어요 (지금 SUB: ${subs.join(', ') || '없음'})`);
+        subs.splice(i, 1); setSubs(row, subs);
+        L(u, '목록', 'SUB', `SUB에서 ${v} 삭제 → SUB: ${subs.join(', ') || '없음'}`);
+      } else if (op === '비고교체') {
+        if (!v) return L(u, '오류', '비고', `값 칸이 비어 있어요 (비고를 지우려면 ${CLEAR})`);
+        row[L_NOTE] = v === CLEAR ? null : v;
+        L(u, '목록', '비고', v === CLEAR ? '비고를 비웠어요' : `비고를 새 글로 바꿨어요 (${v.length}자)`);
+      } else if (op === '비고덧붙이기') {
+        if (!v) return L(u, '오류', '비고', '값 칸에 덧붙일 글을 적어 주세요');
+        row[L_NOTE] = [filled(row[L_NOTE]) ? String(row[L_NOTE]) : '', v.replace(/^\+\s*/, '')].filter(Boolean).join('\n');
+        L(u, '목록', '비고', `비고 끝에 덧붙였어요: ${v.replace(/^\+\s*/, '')}`);
+      } else if (op === '비고바꾸기') {
+        const f = filled(u['찾을 문구']) ? String(u['찾을 문구']) : '';
+        if (!f) return L(u, '오류', '비고', "'찾을 문구' 칸이 비어 있어요");
+        const note = filled(row[L_NOTE]) ? String(row[L_NOTE]) : '';
+        const n = note.split(f).length - 1;
+        if (!n) return L(u, '오류', '비고', `비고에서 '${f}'을(를) 찾지 못했어요 (띄어쓰기·기호까지 같아야 해요)`);
+        const to = v === CLEAR ? '' : v;
+        row[L_NOTE] = note.split(f).join(to);
+        L(u, '목록', '비고', `'${f}' → '${to || '(삭제)'}' ${n}곳`);
+      } else if (op === '순위교체' || op === '순위넣기') {
+        const k = Number(u['순위']);
+        if (autoYears.includes(year)) return L(u, '오류', `${k || ''}위`, `${year}년은 자동 순위 연도라 순위가 공연 행으로 다시 계산돼요 — 원본 공연 행을 고쳐 주세요`);
+        if (!(k >= 1 && k <= 15 && Number.isInteger(k))) return L(u, '오류', '순위', '순위 칸에 1~15를 적어 주세요');
+        if (!v) return L(u, '오류', `${k}위`, '값 칸에 아티스트 이름을 적어 주세요');
+        if (at(v) >= 0) return L(u, '오류', `${k}위`, `${v}은(는) 이미 ${at(v) + 1}위에 있어요`);
+        const restSubs = subs.filter(s => norm(s) !== norm(v));
+        const wasSub = restSubs.length !== subs.length;
+        let out;
+        if (op === '순위교체') {
+          out = top[k - 1];
+          top[k - 1] = v;
+        } else {
+          const nt = top.slice(0, k - 1).concat([v], top.slice(k - 1));
+          out = nt[15]; nt.length = 15;
+          top.splice(0, 15, ...nt);
+        }
+        if (out && !restSubs.some(s => norm(s) === norm(out))) restSubs.push(out);
+        top.forEach((a, i) => row[1 + i] = a || null);
+        setSubs(row, restSubs);
+        L(u, '목록', `${k}위`, `${op === '순위교체' ? `${k}위 ${out || '(빈칸)'} → ${v}` : `${k}위에 ${v} 넣음, 아래 팀 한 칸씩 내려감`}${wasSub ? ' (SUB에서 올라옴)' : ''}${out ? ` / ${out}은(는) SUB로` : ''}`);
+      } else L(u, '오류', '', `작업은 SUB추가·SUB삭제·비고교체·비고덧붙이기·비고바꾸기·순위교체·순위넣기 중 하나여야 해요 (지금: '${u['작업']}')`);
+    });
+  }
+
+  /* 공연장마스터: 작업 추가/수정/삭제, location+city로 찾음 */
+  const MASTER_COLS = ['작업', 'location', 'city', 'country', 'capacity', 'source', '근거'];
+  function applyMasterOps(master, ops, log) {
+    const L = (u, 결과, 내용) => log.push({ 행: `마스터 ${u.__row}`, 작업: u['작업'] || '', year: '', artist: '', 대상: `${u.location || ''}${u.city ? ' / ' + u.city : ''}`, 결과, 내용, 근거: u['근거'] || '' });
+    const key = (x) => norm(x.location) + '|' + norm(x.city);
+    ops.forEach(u => {
+      const op = String(u['작업'] || '').trim();
+      if (!u.location) return L(u, '오류', 'location이 비어 있어요');
+      const i = master.findIndex(m => key(m) === key(u));
+      const capWarn = (m) => isNum(m.capacity) && !String(m.source || '').trim() ? ' (source가 비어 있어 빈 capacity 채우기에는 쓰이지 않아요)' : '';
+      if (u.capacity !== undefined && u.capacity !== CLEAR && !isNum(u.capacity)) return L(u, '오류', `capacity는 숫자여야 해요 (지금: '${u.capacity}')`);
+      if (op === '추가') {
+        if (i >= 0) return L(u, '건너뜀', '같은 공연장(location·city)이 이미 있어요 — 고치려면 수정으로 적어 주세요');
+        const m = { location: u.location, city: u.city ?? null, country: u.country ?? null, capacity: isNum(u.capacity) ? u.capacity : null, source: u.source && u.source !== CLEAR ? u.source : null };
+        master.push(m);
+        L(u, '추가', `capacity ${isNum(m.capacity) ? m.capacity.toLocaleString() : '(빈칸)'}` + capWarn(m));
+      } else if (op === '수정') {
+        if (i < 0) return L(u, '오류', '고칠 공연장을 찾지 못했어요 (location·city를 마스터와 똑같이)');
+        const m = master[i], ch = [];
+        ['country', 'capacity', 'source'].forEach(f => {
+          if (u[f] === undefined || u[f] === null || u[f] === '') return;
+          const nv = u[f] === CLEAR ? null : u[f];
+          if (dkey(m[f]) !== dkey(nv)) { ch.push(`${f}: ${dkey(m[f]) || '(빈칸)'} → ${dkey(nv) || '(빈칸)'}`); m[f] = nv; }
+        });
+        L(u, ch.length ? '수정' : '변경 없음', (ch.join(' / ') || '바뀐 값이 없어요') + capWarn(m));
+      } else if (op === '삭제') {
+        if (i < 0) return L(u, '오류', '지울 공연장을 찾지 못했어요');
+        master.splice(i, 1);
+        L(u, '삭제', '마스터에서 뺐어요 — 이 공연장 행의 빈 capacity는 더 이상 채워지지 않아요');
+      } else L(u, '오류', `작업은 추가·수정·삭제 중 하나여야 해요 (지금: '${op}')`);
+    });
+  }
+
+  function applyUpdate(src, upd, opts) {
+    opts = opts || {};
+    const autoYears = String(opts.autoYears || (src.settings || {})['자동순위연도'] || '').split(/[,\s]+/).map(Number).filter(Boolean);
+    const out = Object.assign({}, src, {
+      main: src.main.map(r => Object.assign({}, r)), official: src.official.map(o => Object.assign({}, o)),
+      appendix: (src.appendix || []).map(r => Object.assign({}, r)), master: (src.master || []).map(m => Object.assign({}, m)),
+      list: src.list ? { origin: src.list.origin, rows: src.list.rows.map(r => r.slice()) } : null,
+    });
     const log = [];
-    const L = (u, 결과, 내용) => log.push({ 행: u.__row, 작업: u['작업'] || '', year: u.year ?? '', artist: u.artist ?? '', 대상: `${dkey(u['대상_start_date'] || u.start_date)} ${u['대상_location'] || u.location || ''}`.trim(), 결과, 내용, 근거: u['근거'] || '' });
+    const isSolo = (u) => String(u['대상시트'] || '').replace(/\s/g, '') === '솔로부록';
+    const L = (u, 결과, 내용) => log.push({ 행: u.__row, 작업: u['작업'] || '', year: u.year ?? '', artist: u.artist ?? '', 대상: `${isSolo(u) ? '[솔로부록] ' : ''}${dkey(u['대상_start_date'] || u.start_date)} ${u['대상_location'] || u.location || ''}`.trim(), 결과, 내용, 근거: u['근거'] || '' });
+    // 대상시트: 비우면 공연목록, '솔로부록'이면 솔로부록
+    const arrOf = (u) => isSolo(u) ? out.appendix : out.main;
     const find = (u) => {
       const d = dkey(u['대상_start_date'] || u.start_date), loc = norm(u['대상_location'] || u.location);
-      return out.main.findIndex(r => r.year === u.year && norm(r.artist) === norm(u.artist) && dkey(r.start_date) === d && (!loc || norm(r.location) === loc));
+      return arrOf(u).findIndex(r => r.year === u.year && norm(r.artist) === norm(u.artist) && dkey(r.start_date) === d && (!loc || norm(r.location) === loc));
     };
     const addSrc = (r, u) => { if (u['출처']) r['출처'] = [r['출처'], u['출처']].filter(Boolean).join(' / '); };
     upd.rows.forEach(u => {
       const op = String(u['작업'] || '').trim();
+      const ts = String(u['대상시트'] || '').replace(/\s/g, '');
+      if (ts && ts !== '솔로부록' && ts !== '공연목록') return L(u, '오류', `대상시트는 비우거나(공연목록) '솔로부록'이어야 해요 (지금: '${u['대상시트']}')`);
       if (!isNum(u.year) || !u.artist) return L(u, '오류', 'year·artist가 비어 있어요');
+      const arr = arrOf(u);
       if (op === '추가') {
         if (!(u.start_date instanceof Date) || !u.location) return L(u, '오류', 'start_date·location이 필요해요');
         if (find(u) >= 0) return L(u, '건너뜀', '같은 공연(연도·아티스트·시작일·공연장)이 이미 있어요');
         const r = {}; FIELDS.forEach(f => r[f] = (u[f] === undefined || u[f] === CLEAR) ? null : u[f]);
-        const same = out.main.find(x => norm(x.artist) === norm(u.artist));
+        const same = arr.find(x => norm(x.artist) === norm(u.artist)) || [...out.main, ...out.appendix].find(x => norm(x.artist) === norm(u.artist));
         const filled = [];
         if (same) META.forEach(f => { if (r[f] == null && same[f] != null) { r[f] = same[f]; filled.push(f); } });
         if (!r.type) r.type = 'concert';
-        out.main.push(r);
+        if (isSolo(u)) {
+          // 솔로부록은 아티스트 블록 순서대로 출력되므로 같은 아티스트 블록 안 날짜 자리에 끼움
+          const same = arr.map((x, i) => [x, i]).filter(([x]) => norm(x.artist) === norm(r.artist));
+          if (!same.length) arr.push(r);
+          else {
+            const later = same.find(([x]) => x.start_date instanceof Date && x.start_date > r.start_date);
+            arr.splice(later ? later[1] : same[same.length - 1][1] + 1, 0, r);
+          }
+        } else arr.push(r);
         L(u, '추가', `${r.city || ''} ${r.location} ${dkey(r.start_date)}~${dkey(r.end_date)} ${r.days ?? ''}일` + (filled.length ? ` (아티스트 정보 ${filled.length}칸은 기존 행에서 복사)` : ''));
       } else if (op === '수정') {
         const i = find(u);
         if (i < 0) return L(u, '오류', '고칠 공연을 찾지 못했어요 (대상_start_date·대상_location 확인)');
-        const r = out.main[i], ch = [];
+        const r = arr[i], ch = [];
         FIELDS.forEach(f => {
           if (f === '출처' || u[f] === undefined || u[f] === null || u[f] === '') return;
           let nv = u[f] === CLEAR ? null : u[f];
@@ -339,7 +481,7 @@
       } else if (op === '삭제') {
         const i = find(u);
         if (i < 0) return L(u, '오류', '지울 공연을 찾지 못했어요');
-        const r = out.main.splice(i, 1)[0];
+        const r = arr.splice(i, 1)[0];
         L(u, '삭제', `${r.city || ''} ${r.location} ${dkey(r.start_date)}`);
       } else L(u, '오류', `작업은 추가·수정·삭제 중 하나여야 해요 (지금: '${op}')`);
     });
@@ -351,16 +493,18 @@
       if (i >= 0) { const old = out.official[i]['공식관객수']; out.official[i] = v; log.push({ 행: `공식누적 ${k + 2}`, 작업: '공식누적', year: o.year, artist: o.artist, 대상: g, 결과: '수정', 내용: `${old} → ${v.공식관객수}`, 근거: o['출처'] || '' }); }
       else { out.official.push(v); log.push({ 행: `공식누적 ${k + 2}`, 작업: '공식누적', year: o.year, artist: o.artist, 대상: g, 결과: '추가', 내용: `${v.공식관객수.toLocaleString()}`, 근거: o['출처'] || '' }); }
     });
+    applyListOps(out.list, upd.list || [], autoYears, log);
+    applyMasterOps(out.master, upd.master || [], log);
     return { src: out, log };
   }
 
-  async function writeUpdate(rows, official) {
+  async function writeUpdate(rows, official, list) {
     const wb = new root.ExcelJS.Workbook();
     const ws = wb.addWorksheet(UPD_SHEET);
     ws.addRow(UPD_COLS); ws.getRow(1).font = { bold: true };
     (rows || []).forEach(d => ws.addRow(UPD_COLS.map(c => d[c] === undefined ? null : d[c])));
     UPD_COLS.forEach((c, i) => {
-      ws.getColumn(i + 1).width = ({ 작업: 7, artist: 14, location: 28, 대상_location: 28, remarks: 40, 출처: 40, 근거: 50 })[c] || 12;
+      ws.getColumn(i + 1).width = ({ 작업: 7, 대상시트: 10, artist: 14, location: 28, 대상_location: 28, remarks: 40, 출처: 40, 근거: 50 })[c] || 12;
       if (/start_date|end_date/.test(c)) ws.getColumn(i + 1).numFmt = 'yyyy-mm-dd';
     });
     ws.views = [{ state: 'frozen', ySplit: 1, xSplit: 3 }];
@@ -368,18 +512,41 @@
     const oc = ['집계묶음', 'year', 'artist', '공식관객수', '출처', '설명'];
     o.addRow(oc); o.getRow(1).font = { bold: true };
     (official || []).forEach(d => o.addRow(oc.map(c => d[c] ?? null)));
+    const ls = wb.addWorksheet(LIST_SHEET);
+    ls.addRow(LIST_COLS); ls.getRow(1).font = { bold: true };
+    (list || []).forEach(d => ls.addRow(LIST_COLS.map(c => d[c] ?? null)));
+    LIST_COLS.forEach((c, i) => ls.getColumn(i + 1).width = ({ 작업: 12, year: 7, 순위: 6, '찾을 문구': 40, 값: 40, 근거: 50 })[c] || 12);
+    ls.views = [{ state: 'frozen', ySplit: 1 }];
+    const ms = wb.addWorksheet('공연장마스터');
+    ms.addRow(MASTER_COLS); ms.getRow(1).font = { bold: true };
+    MASTER_COLS.forEach((c, i) => ms.getColumn(i + 1).width = ({ 작업: 7, location: 36, city: 14, source: 40, 근거: 50 })[c] || 12);
+    ms.views = [{ state: 'frozen', ySplit: 1 }];
     const h = wb.addWorksheet('작성법');
     [['작업', '추가 / 수정 / 삭제'],
      ['추가', '새 공연 1행. year·artist·start_date·location 필수. gender~agency3가 비면 같은 아티스트 기존 행에서 복사'],
      ['수정', '대상_start_date·대상_location으로 기존 공연을 찾고, 값을 적은 칸만 바꿈. 칸을 지우려면 (비움), 기존 글 뒤에 덧붙이려면 + 로 시작'],
      ['삭제', '대상_start_date·대상_location(또는 start_date·location)으로 찾은 공연을 삭제'],
      ['출처', '수정 시 기존 출처 뒤에 덧붙임'],
-     ['공식누적 시트', '합계만 공식 발표된 경우. 같은 집계묶음이 있으면 덮어씀. 공연목록 행의 집계묶음 칸도 같이 적어야 반영됨']].forEach(r => h.addRow(r));
+     ['공식누적 시트', '합계만 공식 발표된 경우. 같은 집계묶음이 있으면 덮어씀. 공연목록 행의 집계묶음 칸도 같이 적어야 반영됨'],
+     [],
+     ['목록 시트', "'연도별 아티스트 목록' 고치기. 한 행 = 작업 하나, 위에서부터 차례로 적용. year는 필수"],
+     ['SUB추가', '값 = 아티스트 이름. 비고 오른쪽 SUB 칸(S열부터) 끝에 넣음. 이미 15팀이나 SUB에 있으면 건너뜀'],
+     ['SUB삭제', '값 = 아티스트 이름. SUB 칸에서 빼고 뒤 칸을 앞으로 당김'],
+     ['비고교체', '값 = 새 비고 전체. 비우려면 (비움)'],
+     ['비고덧붙이기', '값 = 덧붙일 글. 기존 비고 다음 줄에 붙음'],
+     ['비고바꾸기', "찾을 문구 = 지금 비고 속 글(띄어쓰기·기호까지 똑같이), 값 = 바꿀 글. 지우려면 값에 (비움). 예: 찾을 문구 'XG·&TEAM·KATSEYE 포함' → 값 '&TEAM·KATSEYE 포함'"],
+     ['순위교체', '순위(1~15)의 팀을 값의 팀으로 바꿈. 밀려난 팀은 SUB로. 자동 순위 연도(설정의 자동순위연도)는 순위를 공연 행으로 다시 계산하므로 쓸 수 없음'],
+     ['순위넣기', '순위(1~15) 자리에 값의 팀을 넣고 아래 팀을 한 칸씩 내림. 15위였던 팀은 SUB로. 넣는 팀이 SUB에 있었으면 SUB에서 빠짐'],
+     ['자동 순위 연도', 'SUB추가·비고 작업은 가능. SUB 팀이 자동 순위로 15팀 안에 들면 결과 엑셀에서 SUB 칸에서 자동으로 빠짐'],
+     [],
+     ['대상시트 열', "'업데이트' 시트 맨 오른쪽. 비우면 공연목록, '솔로부록'이라고 적으면 솔로부록 행을 추가·수정·삭제. 솔로부록 추가 행은 같은 아티스트 블록 안 날짜 자리에 들어감"],
+     ['공연장마스터 시트', '작업(추가/수정/삭제) + location·city로 공연장을 찾음. 수정은 적은 칸(country·capacity·source)만 바꾸고 (비움)은 칸 비우기'],
+     ['', 'source(출처)를 적은 공연장만 공연 행의 빈 capacity를 채우는 데 쓰임. 배치별로 수용인원이 달라 공란으로 둘 공연장은 capacity를 (비움)으로']].forEach(r => h.addRow(r));
     h.getColumn(1).width = 14; h.getColumn(2).width = 100;
     return wb.xlsx.writeBuffer();
   }
 
-  const api = { convertLegacy, writeSource, readSource, plan, writeOutput, readUpdate, applyUpdate, writeUpdate, FIELDS };
+  const api = { MASTER_COLS, convertLegacy, writeSource, readSource, plan, writeOutput, readUpdate, applyUpdate, writeUpdate, listSubs, FIELDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.KpopAssembler = api;
 })(typeof window !== 'undefined' ? window : globalThis);
