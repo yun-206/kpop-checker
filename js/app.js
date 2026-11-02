@@ -2,17 +2,37 @@
    조립·검증·변환 로직은 assembler.js / checker.js에 있고, 여기서는 화면만 다룹니다. */
 const $ = (id) => document.getElementById(id);
 let mainWb = null, venueMaster = null, result = null;
+let busy = false, chkFromAsm = false;   // busy: 조립 중에는 새로 하기·파일 빼기 막음 / chkFromAsm: 검증 탭 파일이 조립 결과인지
 const today = new Date();
 $('refDate').value = today.toISOString().slice(0, 10);
 
-function bindDrop(drop, input, onFile) {
+/* 드롭존 상태: '' | 'has-file' | 'is-error'. 파일이 있으면 아래 '파일 빼기' 버튼을 보여줌 */
+function markDrop(drop, state) {
+  drop.classList.remove('has-file', 'is-error', 'over');
+  if (state) drop.classList.add(state);
+  const small = drop.querySelector('small');
+  if (!state && small && small.dataset.default) small.textContent = small.dataset.default;
+  if (drop.__clear) drop.__clear.classList.toggle('hide', !state);
+  syncResets();
+}
+function bindDrop(drop, input, onFile, onClear) {
+  const small = drop.querySelector('small');
+  if (small) small.dataset.default = small.textContent;
+  // 파일 빼기 버튼 (드롭존 바로 아래)
+  const clr = document.createElement('button');
+  clr.type = 'button'; clr.className = 'drop-clear hide'; clr.textContent = '파일 빼기';
+  const lbl = document.getElementById((drop.getAttribute('aria-labelledby') || '').split(' ')[0]);
+  clr.setAttribute('aria-label', `${lbl ? lbl.firstChild.textContent.trim() : ''} 파일 빼기`.trim());
+  drop.insertAdjacentElement('afterend', clr);
+  drop.__clear = clr;
+  clr.onclick = () => { if (busy) return; onClear && onClear(); markDrop(drop, ''); drop.focus(); };
   const run = async (file) => {
-    if (!file) return;
-    drop.classList.remove('has-file', 'is-error');
+    if (!file || busy) return;
+    markDrop(drop, '');
     drop.setAttribute('aria-busy', 'true');
     const ok = await onFile(file);
     drop.removeAttribute('aria-busy');
-    drop.classList.add(ok === false ? 'is-error' : 'has-file');
+    markDrop(drop, ok === false ? 'is-error' : 'has-file');
   };
   drop.onclick = () => input.click();
   drop.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } };
@@ -25,18 +45,19 @@ const readWb = (file) => file.arrayBuffer().then(buf => XLSX.read(buf, { cellFor
 
 bindDrop($('dropMain'), $('fileMain'), async (f) => {
   $('status').textContent = '불러오는 중…';
+  chkFromAsm = false;
   try { mainWb = await readWb(f); $('mainName').textContent = f.name; $('runBtn').disabled = false; $('status').textContent = `시트: ${mainWb.SheetNames.join(', ')}`; }
-  catch (e) { $('status').textContent = '파일을 읽지 못했어요: ' + e.message; return false; }
-});
+  catch (e) { mainWb = null; $('runBtn').disabled = true; $('status').textContent = '파일을 읽지 못했어요: ' + e.message; return false; }
+}, () => { clearCheckFile(); $('status').textContent = '파일을 뺐어요.'; });
 bindDrop($('dropVenue'), $('fileVenue'), async (f) => {
   try { venueMaster = KpopChecker.parseVenueMaster(await readWb(f)); $('venueName').textContent = `${f.name}, 공연장 ${venueMaster.size}곳`; }
-  catch (e) { $('venueName').textContent = '읽기 실패: ' + e.message; return false; }
-});
+  catch (e) { venueMaster = null; $('venueName').textContent = '읽기 실패: ' + e.message; return false; }
+}, () => { venueMaster = null; $('status').textContent = '공연장 마스터를 뺐어요. 다시 검사하면 마스터 없이 검사해요.'; });
 
 const SEVS = [['오류', 'e'], ['확인필요', 'w'], ['참고', 'i']];
 let sevOn = new Set(['오류', '확인필요']), checkOn = null;
 
-$('runBtn').onclick = () => runCheck();
+$('runBtn').onclick = () => mainWb && runCheck();
 function runCheck() {
   const [y, m, d] = $('refDate').value.split('-').map(Number);
   const t0 = performance.now();
@@ -137,8 +158,8 @@ bindDrop($('dropLeg'), $('fileLeg'), async (f) => {
     legWb = await readWb(f);
     if (!legWb.Sheets['해외 공연 현황']) throw new Error("'해외 공연 현황' 시트가 없어요");
     $('legName').textContent = f.name; $('cnvBtn').disabled = false; $('cnvStatus').textContent = '';
-  } catch (e) { $('legName').textContent = '읽기 실패: ' + e.message; return false; }
-});
+  } catch (e) { legWb = null; $('cnvBtn').disabled = true; $('legName').textContent = '읽기 실패: ' + e.message; return false; }
+}, () => { legWb = null; $('cnvBtn').disabled = true; $('cnvStatus').textContent = '파일을 뺐어요.'; });
 $('cnvBtn').onclick = async () => {
   try {
     const src = KpopAssembler.convertLegacy(legWb);
@@ -161,18 +182,20 @@ bindDrop($('dropSrc'), $('fileSrc'), async (f) => {
     if (st['상위N']) $('aTop').value = st['상위N'];
     $('srcName').textContent = `${f.name}, 공연 ${srcData.main.length.toLocaleString()}행, 공식누적 ${srcData.official.length}건`;
     $('asmBtn').disabled = false;
-  } catch (e) { $('srcName').textContent = '읽기 실패: ' + e.message; return false; }
-});
+  } catch (e) { srcData = null; $('asmBtn').disabled = true; $('srcName').textContent = '읽기 실패: ' + e.message; return false; }
+}, () => { srcData = null; $('asmBtn').disabled = true; clearAsmResult(); $('asmStatus').textContent = '원본 파일을 뺐어요.'; });
 
 bindDrop($('dropUpd'), $('fileUpd'), async (f) => {
   try {
     updData = KpopAssembler.readUpdate(await readWb(f));
     $('updName').textContent = `${f.name}, 공연 ${updData.rows.length}행, 공식누적 ${updData.official.length}건, 목록 ${updData.list.length}건${updData.master.length ? `, 공연장마스터 ${updData.master.length}건` : ''}`;
   } catch (e) { updData = null; $('updName').textContent = '읽기 실패: ' + e.message; return false; }
-});
+}, () => { updData = null; $('asmStatus').textContent = srcData ? '업데이트 파일을 뺐어요. 다시 만들면 원본만으로 조립해요.' : '업데이트 파일을 뺐어요.'; });
 $('dlTpl').onclick = async (e) => { e.preventDefault(); saveBuf(await KpopAssembler.writeUpdate([], []), 'update_template.xlsx'); };
 
 $('asmBtn').onclick = async () => {
+  if (!srcData || busy) return;
+  busy = true; syncResets(); $('asmBtn').disabled = true;
   $('asmStatus').textContent = '만드는 중…';
   try {
     merged = srcData; updLog = [];
@@ -182,12 +205,13 @@ $('asmBtn').onclick = async () => {
     outBuf = await KpopAssembler.writeOutput(merged, asmPlan);
     // 만든 결과를 바로 검증
     mainWb = XLSX.read(outBuf, { type: 'array', cellFormula: true, sheetStubs: true, cellNF: true });
-    $('refDate').value = $('aRef').value; $('mainName').textContent = '조립 결과(방금 생성)'; $('runBtn').disabled = false; $('dropMain').classList.add('has-file');
+    $('refDate').value = $('aRef').value; $('mainName').textContent = '조립 결과(방금 생성)'; $('runBtn').disabled = false; markDrop($('dropMain'), 'has-file'); chkFromAsm = true;
     const chk = runCheck();
     renderAsm(chk);
     $('asmStatus').textContent = '';
     $('asmResult').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   } catch (e) { console.error(e); $('asmStatus').textContent = '실패: ' + e.message; }
+  finally { busy = false; $('asmBtn').disabled = !srcData; syncResets(); }
 };
 
 function renderAsm(chk) {
@@ -249,3 +273,51 @@ $('dlBasis').onclick = () => {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(merged.official.map(o => ({ 집계묶음: o['집계묶음'], 연도: o.year, 아티스트: o.artist, 공식관객수: o['공식관객수'], 출처: o['출처'], 설명: o['설명'] }))), '공식누적 출처');
   saveWb(wb, `순위산정근거_${$('aRef').value}.xlsx`);
 };
+
+/* ---------- 새로 하기 (도구별 초기화) ---------- */
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function clearAsmResult() {
+  asmPlan = null; outBuf = null; merged = null; updLog = [];
+  ['asmStats', 'updWrap', 'rankWrap', 'asmNotes'].forEach(id => $(id).innerHTML = '');
+  $('asmResult').classList.add('hide');
+  if (chkFromAsm) resetCheck(true);   // 검증 탭에 조립 결과가 올라가 있으면 같이 비움
+}
+function clearCheckFile() {
+  mainWb = null; result = null; chkFromAsm = false;
+  $('runBtn').disabled = true;
+  $('resultCard').classList.add('hide');
+  ['stats', 'sevChips', 'checkChips', 'tbody', 'shown'].forEach(id => $(id).innerHTML = '');
+}
+function resetCheck(quiet) {
+  clearCheckFile(); venueMaster = null;
+  markDrop($('dropMain'), ''); markDrop($('dropVenue'), '');
+  $('refDate').value = todayStr(); $('strictFrom').value = 2025;
+  $('yearFrom').value = ''; $('yearTo').value = ''; $('q').value = '';
+  sevOn = new Set(['오류', '확인필요']); checkOn = null;
+  $('status').textContent = quiet ? '' : '처음 상태로 돌렸어요. 파일을 다시 올려 주세요.';
+}
+function resetAsm() {
+  srcData = null; updData = null;
+  clearAsmResult();
+  markDrop($('dropSrc'), ''); markDrop($('dropUpd'), '');
+  $('asmBtn').disabled = true;
+  $('aRef').value = todayStr(); $('aYears').value = ''; $('aTop').value = 15;
+  $('asmStatus').textContent = '처음 상태로 돌렸어요. 원본 데이터를 다시 올려 주세요.';
+}
+function resetCnv() {
+  legWb = null; $('cnvBtn').disabled = true;
+  markDrop($('dropLeg'), '');
+  $('cnvStatus').textContent = '처음 상태로 돌렸어요.';
+}
+// 되돌릴 게 있을 때만 '새로 하기' 활성화
+function syncResets() {
+  const has = (id) => /has-file|is-error/.test($(id).className);
+  const set = (id, on) => { const b = $(id); if (b) b.disabled = busy || !on; };
+  set('asmReset', has('dropSrc') || has('dropUpd') || !$('asmResult').classList.contains('hide'));
+  set('chkReset', has('dropMain') || has('dropVenue') || !$('resultCard').classList.contains('hide'));
+  set('cnvReset', has('dropLeg'));
+}
+$('asmReset').onclick = () => { if (busy) return; resetAsm(); syncResets(); $('dropSrc').focus(); };
+$('chkReset').onclick = () => { if (busy) return; resetCheck(); syncResets(); $('dropMain').focus(); };
+$('cnvReset').onclick = () => { resetCnv(); syncResets(); $('dropLeg').focus(); };
+syncResets();

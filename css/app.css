@@ -383,6 +383,9 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.8); }
 .drop.has-file small { color: var(--ink); font-weight: 500; }
 .drop.is-error { border-color: var(--err); background: var(--err-bg); }
 .drop.is-error small { color: var(--err); }
+.drop-clear { align-self: flex-end; margin-top: -2px; padding: 4px 2px; background: none; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.drop-clear:hover, .drop-clear:focus-visible { color: var(--err); }
+.drop-clear.hide { display: none; }
 
 .status { font-size: 14px; color: var(--muted); min-height: 1.4em; }
 
